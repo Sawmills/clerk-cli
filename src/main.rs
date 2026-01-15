@@ -104,8 +104,8 @@ enum OrgsSubcommand {
 
 #[derive(Clone, ValueEnum)]
 enum MemberAction {
-    /// Impersonate this user
     Impersonate,
+    Jwt,
 }
 
 #[tokio::main]
@@ -138,6 +138,7 @@ async fn main() -> anyhow::Result<()> {
                     user_id,
                     action.map(|a| match a {
                         MemberAction::Impersonate => commands::orgs::MemberAction::Impersonate,
+                        MemberAction::Jwt => commands::orgs::MemberAction::Jwt,
                     }),
                 )
                 .await?;

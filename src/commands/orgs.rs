@@ -1,5 +1,5 @@
 use crate::client::ClerkClient;
-use crate::commands::impersonate;
+use crate::commands::{impersonate, jwt};
 use comfy_table::{Table, presets::UTF8_FULL};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -7,6 +7,7 @@ use nucleo_picker::{Picker, render::StrRenderer};
 
 pub enum MemberAction {
     Impersonate,
+    Jwt,
 }
 
 pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
@@ -162,9 +163,12 @@ pub async fn members(
         (Some(uid), Some(MemberAction::Impersonate)) => {
             impersonate::run(Some(uid)).await?;
         }
+        (Some(uid), Some(MemberAction::Jwt)) => {
+            jwt::run(Some(uid), None).await?;
+        }
         (Some(uid), None) => {
             anyhow::bail!(
-                "Action required for user. Usage: clerk orgs {} members {} impersonate",
+                "Action required for user. Usage: clerk orgs {} members {} impersonate|jwt",
                 org_slug,
                 uid
             );

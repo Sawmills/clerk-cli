@@ -55,9 +55,10 @@ _clerk() {
                     && ret=0
                 ;;
             (orgs)
-                # Check what the first arg is to determine completion behavior
-                # words array is (orgs orgs <arg1> <arg2>...) after prepend at line 43
-                local first_arg="${words[3]}"
+                # After word manipulation: words=(orgs <arg1> <arg2> ...)
+                # words[2]=first_arg (org slug or subcommand), words[3]=second_arg
+                local first_arg="${words[2]}"
+                local second_arg="${words[3]}"
                 case $first_arg in
                     (list)
                         _arguments "${_arguments_options[@]}" : \
@@ -78,17 +79,15 @@ _clerk() {
                             && ret=0
                         ;;
                     (*)
-                        local second_arg="${words[4]}"
                         case $second_arg in
                             (members)
-                                _arguments "${_arguments_options[@]}" : \
-                                    '-h[Print help]' \
-                                    '--help[Print help]' \
-                                    '1::ORG:' \
-                                    '2::ACTION:' \
-                                    '3::USER:_clerk_members' \
-                                    '4::MEMBER_ACTION:_clerk_member_actions' \
-                                    && ret=0
+                                # clerk orgs <org> members <user> <action>
+                                # CURRENT: 4=user, 5=action, 6+=done
+                                if (( CURRENT == 4 )); then
+                                    _clerk_members && ret=0
+                                elif (( CURRENT == 5 )); then
+                                    _clerk_member_actions && ret=0
+                                fi
                                 ;;
                             (*)
                                 _arguments "${_arguments_options[@]}" : \
@@ -164,7 +163,7 @@ _clerk_org_actions() {
 }
 
 _clerk_members() {
-    local org_slug="${words[3]}"
+    local org_slug="${words[2]}"
     local -a members
     local line
     while IFS=: read -r user_id desc; do
@@ -177,6 +176,7 @@ _clerk_member_actions() {
     local commands
     commands=(
         'impersonate:Impersonate this user'
+        'jwt:Generate a JWT for this user'
     )
     _describe -t commands 'action' commands
 }
