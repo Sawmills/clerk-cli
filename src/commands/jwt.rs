@@ -31,7 +31,9 @@ pub async fn run(user_id: Option<String>, template: Option<String>) -> Result<()
     };
 
     let session_id = get_or_create_session(&client, &user_id).await?;
-    let token = client.create_session_token(&session_id, &template_name).await?;
+    let token = client
+        .create_session_token(&session_id, &template_name)
+        .await?;
 
     println!("{}", token.jwt);
 

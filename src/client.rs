@@ -184,7 +184,10 @@ impl ClerkClient {
         session_id: &str,
         template_name: &str,
     ) -> Result<SessionToken, ClerkClientError> {
-        let url = format!("{}/sessions/{}/tokens/{}", BASE_URL, session_id, template_name);
+        let url = format!(
+            "{}/sessions/{}/tokens/{}",
+            BASE_URL, session_id, template_name
+        );
 
         let resp = self
             .client
@@ -225,7 +228,10 @@ impl ClerkClient {
 
         if !resp.status().is_success() {
             let text = resp.text().await?;
-            return Err(ClerkClientError::Api(format!("Failed to exchange ticket: {}", text)));
+            return Err(ClerkClientError::Api(format!(
+                "Failed to exchange ticket: {}",
+                text
+            )));
         }
 
         let json: serde_json::Value = resp.json().await?;
