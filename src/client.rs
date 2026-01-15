@@ -6,7 +6,7 @@ const BASE_URL: &str = "https://api.clerk.com/v1";
 
 #[derive(Error, Debug)]
 pub enum ClerkClientError {
-    #[error("CLERK_SECRET_KEY not set")]
+    #[error("CLERK_API_KEY not set")]
     MissingApiKey,
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
@@ -21,7 +21,7 @@ pub struct ClerkClient {
 
 impl ClerkClient {
     pub fn new() -> Result<Self, ClerkClientError> {
-        let api_key = std::env::var("CLERK_SECRET_KEY")
+        let api_key = std::env::var("CLERK_API_KEY")
             .map_err(|_| ClerkClientError::MissingApiKey)?;
 
         Ok(Self {

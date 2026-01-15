@@ -1,13 +1,13 @@
 //! E2E tests against live Clerk API
 //! 
-//! Run with: CLERK_SECRET_KEY=sk_test_xxx cargo test --test e2e_test -- --ignored
+//! Run with: CLERK_API_KEY=sk_test_xxx cargo test --test e2e_test -- --ignored
 //! 
 //! These tests require a valid Clerk API key and will make real API calls.
 
 mod common;
 
 fn get_api_key() -> Option<String> {
-    std::env::var("CLERK_SECRET_KEY").ok()
+    std::env::var("CLERK_API_KEY").ok()
 }
 
 fn make_live_client() -> Option<common::TestClerkClient> {
@@ -17,7 +17,7 @@ fn make_live_client() -> Option<common::TestClerkClient> {
 #[tokio::test]
 #[ignore]
 async fn e2e_list_users() {
-    let client = make_live_client().expect("CLERK_SECRET_KEY required for e2e tests");
+    let client = make_live_client().expect("CLERK_API_KEY required for e2e tests");
 
     let users = client.list_users(5, None).await;
     assert!(users.is_ok(), "Failed to list users: {:?}", users.err());
@@ -33,7 +33,7 @@ async fn e2e_list_users() {
 #[tokio::test]
 #[ignore]
 async fn e2e_list_users_with_query() {
-    let client = make_live_client().expect("CLERK_SECRET_KEY required for e2e tests");
+    let client = make_live_client().expect("CLERK_API_KEY required for e2e tests");
 
     let users = client.list_users(10, Some("@")).await;
     assert!(users.is_ok(), "Failed to search users: {:?}", users.err());
@@ -44,7 +44,7 @@ async fn e2e_list_users_with_query() {
 #[tokio::test]
 #[ignore]
 async fn e2e_list_organizations() {
-    let client = make_live_client().expect("CLERK_SECRET_KEY required for e2e tests");
+    let client = make_live_client().expect("CLERK_API_KEY required for e2e tests");
 
     let orgs = client.list_organizations(10).await;
     assert!(orgs.is_ok(), "Failed to list organizations: {:?}", orgs.err());
@@ -60,7 +60,7 @@ async fn e2e_list_organizations() {
 #[tokio::test]
 #[ignore]
 async fn e2e_create_sign_in_token() {
-    let client = make_live_client().expect("CLERK_SECRET_KEY required for e2e tests");
+    let client = make_live_client().expect("CLERK_API_KEY required for e2e tests");
 
     let users = client.list_users(1, None).await.expect("Failed to list users");
 
@@ -93,7 +93,7 @@ async fn e2e_invalid_api_key() {
 #[tokio::test]
 #[ignore]
 async fn e2e_sign_in_token_invalid_user() {
-    let client = make_live_client().expect("CLERK_SECRET_KEY required for e2e tests");
+    let client = make_live_client().expect("CLERK_API_KEY required for e2e tests");
 
     let result = client.create_sign_in_token("user_nonexistent_12345", 60).await;
     assert!(result.is_err(), "Expected error for non-existent user");

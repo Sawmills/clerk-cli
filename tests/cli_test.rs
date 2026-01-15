@@ -87,11 +87,11 @@ fn cli_completions_fish() {
 fn cli_missing_api_key() {
     Command::cargo_bin("clerk")
         .unwrap()
-        .env_remove("CLERK_SECRET_KEY")
+        .env_remove("CLERK_API_KEY")
         .arg("users")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("CLERK_SECRET_KEY"));
+        .stderr(predicate::str::contains("CLERK_API_KEY"));
 }
 
 #[test]
