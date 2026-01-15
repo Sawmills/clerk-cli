@@ -33,7 +33,11 @@ async fn prompt_user_selection(client: &ClerkClient) -> anyhow::Result<String> {
         .iter()
         .map(|m| {
             let name = m.public_user_data.display_name();
-            let email = m.public_user_data.identifier.as_deref().unwrap_or("no email");
+            let email = m
+                .public_user_data
+                .identifier
+                .as_deref()
+                .unwrap_or("no email");
             let role = &m.role;
             if name.is_empty() {
                 format!("{} [{}]", email, role)
