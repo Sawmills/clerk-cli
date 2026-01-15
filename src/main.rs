@@ -36,6 +36,10 @@ enum Commands {
         /// Fuzzy search by name
         #[arg(short, long)]
         fuzzy: Option<String>,
+
+        /// Output only org IDs (one per line)
+        #[arg(short, long)]
+        ids_only: bool,
     },
 
     /// Generate a sign-in link to impersonate a user
@@ -62,8 +66,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::Users { limit, query } => {
             commands::users::run(limit, query).await?;
         }
-        Commands::Orgs { limit, fuzzy } => {
-            commands::orgs::run(limit, fuzzy).await?;
+        Commands::Orgs { limit, fuzzy, ids_only } => {
+            commands::orgs::run(limit, fuzzy, ids_only).await?;
         }
         Commands::Impersonate { user_id } => {
             commands::impersonate::run(user_id).await?;

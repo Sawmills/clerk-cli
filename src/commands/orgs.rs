@@ -3,7 +3,7 @@ use comfy_table::{presets::UTF8_FULL, Table};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 
-pub async fn run(limit: u32, fuzzy: Option<String>) -> anyhow::Result<()> {
+pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
     let orgs = client.list_organizations(limit).await?;
 
@@ -28,7 +28,16 @@ pub async fn run(limit: u32, fuzzy: Option<String>) -> anyhow::Result<()> {
     };
 
     if filtered.is_empty() {
-        println!("No organizations found.");
+        if !ids_only {
+            println!("No organizations found.");
+        }
+        return Ok(());
+    }
+
+    if ids_only {
+        for org in &filtered {
+            println!("{}", org.id);
+        }
         return Ok(());
     }
 
