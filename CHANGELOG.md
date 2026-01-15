@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Sawmills/clerk-cli/compare/v0.9.1...v0.10.0) (2026-01-15)
+
+
+### Features
+
+* **orgs:** add impersonate action for org members ([8b23ff7](https://github.com/Sawmills/clerk-cli/commit/8b23ff75d1a53ba9ac5c988c428d3a94fec39807))
+
 ## [0.9.1](https://github.com/Sawmills/clerk-cli/compare/v0.9.0...v0.9.1) (2026-01-15)
 
 
