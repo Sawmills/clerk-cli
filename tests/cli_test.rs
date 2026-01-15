@@ -1,0 +1,104 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+
+#[test]
+fn cli_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Unofficial Clerk CLI"));
+}
+
+#[test]
+fn cli_version() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .arg("--version")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("0.1.0"));
+}
+
+#[test]
+fn cli_users_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["users", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--limit"))
+        .stdout(predicate::str::contains("--query"));
+}
+
+#[test]
+fn cli_orgs_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--limit"))
+        .stdout(predicate::str::contains("--fuzzy"));
+}
+
+#[test]
+fn cli_impersonate_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["impersonate", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("USER_ID"));
+}
+
+#[test]
+fn cli_completions_bash() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["completions", "bash"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("_clerk"));
+}
+
+#[test]
+fn cli_completions_zsh() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["completions", "zsh"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("#compdef clerk"));
+}
+
+#[test]
+fn cli_completions_fish() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["completions", "fish"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("complete -c clerk"));
+}
+
+#[test]
+fn cli_missing_api_key() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .env_remove("CLERK_SECRET_KEY")
+        .arg("users")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("CLERK_SECRET_KEY"));
+}
+
+#[test]
+fn cli_unknown_command() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .arg("unknown")
+        .assert()
+        .failure();
+}
