@@ -71,6 +71,15 @@ enum Commands {
         #[arg(value_enum)]
         shell: Shell,
     },
+
+    #[command(hide = true)]
+    CompleteOrgs,
+
+    #[command(hide = true)]
+    CompleteUsers {
+        #[arg(long)]
+        org: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -118,6 +127,12 @@ async fn main() -> anyhow::Result<()> {
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();
             generate(shell, &mut cmd, "clerk", &mut io::stdout());
+        }
+        Commands::CompleteOrgs => {
+            commands::completions::complete_orgs().await?;
+        }
+        Commands::CompleteUsers { org } => {
+            commands::completions::complete_users(org).await?;
         }
     }
 

@@ -1,8 +1,8 @@
 use crate::client::ClerkClient;
 use comfy_table::{Table, presets::UTF8_FULL};
-use dialoguer::FuzzySelect;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use nucleo_picker::{Picker, render::StrRenderer};
 
 pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
@@ -83,28 +83,34 @@ pub async fn pick() -> anyhow::Result<()> {
         anyhow::bail!("No organizations found.");
     }
 
-    let display: Vec<String> = orgs
-        .iter()
-        .map(|o| {
-            let members = o.members_count.map(|c| c.to_string()).unwrap_or_default();
-            format!(
-                "{} ({}) - {} members",
-                o.name,
-                o.slug.as_deref().unwrap_or("no-slug"),
-                members
-            )
-        })
-        .collect();
+    let mut picker = Picker::new(StrRenderer);
+    let injector = picker.injector();
 
-    let selection = FuzzySelect::new()
-        .with_prompt("Select organization")
-        .items(&display)
-        .default(0)
-        .interact()?;
+    for org in &orgs {
+        let display = format!(
+            "{} ({})",
+            org.name,
+            org.slug.as_deref().unwrap_or("no-slug")
+        );
+        injector.push(display);
+    }
 
-    println!("{}", orgs[selection].id);
+    let selected = picker.pick()?;
+    if let Some(display) = selected {
+        for org in &orgs {
+            let org_display = format!(
+                "{} ({})",
+                org.name,
+                org.slug.as_deref().unwrap_or("no-slug")
+            );
+            if org_display == *display {
+                println!("{}", org.id);
+                return Ok(());
+            }
+        }
+    }
 
-    Ok(())
+    anyhow::bail!("No organization selected.");
 }
 
 pub async fn pick_org(client: &ClerkClient) -> anyhow::Result<crate::models::Organization> {
@@ -114,24 +120,31 @@ pub async fn pick_org(client: &ClerkClient) -> anyhow::Result<crate::models::Org
         anyhow::bail!("No organizations found.");
     }
 
-    let display: Vec<String> = orgs
-        .iter()
-        .map(|o| {
-            let members = o.members_count.map(|c| c.to_string()).unwrap_or_default();
-            format!(
-                "{} ({}) - {} members",
-                o.name,
-                o.slug.as_deref().unwrap_or("no-slug"),
-                members
-            )
-        })
-        .collect();
+    let mut picker = Picker::new(StrRenderer);
+    let injector = picker.injector();
 
-    let selection = FuzzySelect::new()
-        .with_prompt("Select organization")
-        .items(&display)
-        .default(0)
-        .interact()?;
+    for org in &orgs {
+        let display = format!(
+            "{} ({})",
+            org.name,
+            org.slug.as_deref().unwrap_or("no-slug")
+        );
+        injector.push(display);
+    }
 
-    Ok(orgs.into_iter().nth(selection).unwrap())
+    let selected = picker.pick()?;
+    if let Some(display) = selected {
+        for org in orgs {
+            let org_display = format!(
+                "{} ({})",
+                org.name,
+                org.slug.as_deref().unwrap_or("no-slug")
+            );
+            if org_display == *display {
+                return Ok(org);
+            }
+        }
+    }
+
+    anyhow::bail!("No organization selected.");
 }

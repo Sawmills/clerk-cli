@@ -1,6 +1,6 @@
 use crate::client::ClerkClient;
 use crate::commands::orgs::pick_org;
-use dialoguer::FuzzySelect;
+use nucleo_picker::{Picker, render::StrRenderer};
 
 pub async fn run(user_id: Option<String>) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
@@ -29,9 +29,28 @@ async fn prompt_user_selection(client: &ClerkClient) -> anyhow::Result<String> {
         anyhow::bail!("No users found in organization '{}'.", org.name);
     }
 
-    let display: Vec<String> = memberships
-        .iter()
-        .map(|m| {
+    let mut picker = Picker::new(StrRenderer);
+    let injector = picker.injector();
+
+    for m in &memberships {
+        let name = m.public_user_data.display_name();
+        let email = m
+            .public_user_data
+            .identifier
+            .as_deref()
+            .unwrap_or("no email");
+        let role = &m.role;
+        let display = if name.is_empty() {
+            format!("{} [{}]", email, role)
+        } else {
+            format!("{} <{}> [{}]", name, email, role)
+        };
+        injector.push(display);
+    }
+
+    let selected = picker.pick()?;
+    if let Some(display) = selected {
+        for m in &memberships {
             let name = m.public_user_data.display_name();
             let email = m
                 .public_user_data
@@ -39,19 +58,16 @@ async fn prompt_user_selection(client: &ClerkClient) -> anyhow::Result<String> {
                 .as_deref()
                 .unwrap_or("no email");
             let role = &m.role;
-            if name.is_empty() {
+            let m_display = if name.is_empty() {
                 format!("{} [{}]", email, role)
             } else {
                 format!("{} <{}> [{}]", name, email, role)
+            };
+            if m_display == *display {
+                return Ok(m.public_user_data.user_id.clone());
             }
-        })
-        .collect();
+        }
+    }
 
-    let selection = FuzzySelect::new()
-        .with_prompt(format!("Select user from '{}'", org.name))
-        .items(&display)
-        .default(0)
-        .interact()?;
-
-    Ok(memberships[selection].public_user_data.user_id.clone())
+    anyhow::bail!("No user selected.");
 }
