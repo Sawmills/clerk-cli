@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/Sawmills/clerk-cli/compare/v0.7.0...v0.8.0) (2026-01-15)
+
+
+### Features
+
+* restructure orgs command and bundle custom zsh completions ([e55b2f8](https://github.com/Sawmills/clerk-cli/commit/e55b2f8529fceabfe79e04b72ae639c70c0882f6))
+
 ## [0.7.0](https://github.com/Sawmills/clerk-cli/compare/v0.6.0...v0.7.0) (2026-01-15)
 
 
