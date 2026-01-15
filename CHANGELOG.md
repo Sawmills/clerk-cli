@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Sawmills/clerk-cli/compare/v0.5.0...v0.6.0) (2026-01-15)
+
+
+### Features
+
+* switch to nucleo-picker and add dynamic shell completions ([9690e4c](https://github.com/Sawmills/clerk-cli/commit/9690e4c21701712a68e0c7c891fb4e2754ef17b3))
+
 ## [0.5.0](https://github.com/Sawmills/clerk-cli/compare/v0.4.0...v0.5.0) (2026-01-15)
 
 
