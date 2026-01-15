@@ -88,7 +88,7 @@ jobs:
           app_id: ${{ vars.SAWMILLS_REPO_APP_ID }}
           private_key: ${{ secrets.SAWMILLS_APP_PRIVATE_KEY }}
 
-      - name: Create release
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
         run: |
@@ -96,10 +96,17 @@ jobs:
           tag="${ref#refs/tags/}"
           tag="${tag#refs/}"
 
-          gh release create "${tag}" \
-            --title "${tag}" \
-            --generate-notes \
-            artifacts/*.tar.gz
+          # Check if release exists
+          if gh release view "${tag}" > /dev/null 2>&1; then
+            echo "Release ${tag} exists, uploading assets..."
+            gh release upload "${tag}" artifacts/*.tar.gz --clobber
+          else
+            echo "Creating new release ${tag}..."
+            gh release create "${tag}" \
+              --title "${tag}" \
+              --generate-notes \
+              artifacts/*.tar.gz
+          fi
 
       - name: Update Homebrew tap
         env:
