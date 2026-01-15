@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Sawmills/clerk-cli/compare/v0.6.0...v0.7.0) (2026-01-15)
+
+
+### Features
+
+* add orgs members subcommand and remove members column ([35e11c7](https://github.com/Sawmills/clerk-cli/commit/35e11c7edcfea1b4ce8c03abb6d9b7c7cae5c51b))
+
 ## [0.6.0](https://github.com/Sawmills/clerk-cli/compare/v0.5.0...v0.6.0) (2026-01-15)
 
 
