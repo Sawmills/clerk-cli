@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Sawmills/clerk-cli/compare/v0.4.0...v0.5.0) (2026-01-15)
+
+
+### Features
+
+* add interactive org picker and org-scoped impersonation ([42b1fd3](https://github.com/Sawmills/clerk-cli/commit/42b1fd3196508d4fd12a44b496df249ea5d04b36))
+
 ## [0.4.0](https://github.com/Sawmills/clerk-cli/compare/v0.3.0...v0.4.0) (2026-01-15)
 
 
