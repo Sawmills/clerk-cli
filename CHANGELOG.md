@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/Sawmills/clerk-cli/compare/v0.9.0...v0.9.1) (2026-01-15)
+
+
+### Bug Fixes
+
+* **completions:** show subcommands after org slug in zsh tab completion ([6b98e73](https://github.com/Sawmills/clerk-cli/commit/6b98e73f5a6ef1a472135cd720543bba4607dcf5))
+
 ## [0.9.0](https://github.com/Sawmills/clerk-cli/compare/v0.8.0...v0.9.0) (2026-01-15)
 
 
