@@ -2,7 +2,7 @@ mod client;
 mod commands;
 mod models;
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{Shell, generate};
 use std::io;
 
@@ -91,8 +91,21 @@ enum OrgsSubcommand {
     },
     /// Interactively pick an organization and print its ID
     Pick,
-    /// List members of the organization
-    Members,
+    /// List members of the organization, or act on a specific member
+    Members {
+        /// User ID to act on
+        user_id: Option<String>,
+
+        /// Action to perform on the user
+        #[arg(value_enum)]
+        action: Option<MemberAction>,
+    },
+}
+
+#[derive(Clone, ValueEnum)]
+enum MemberAction {
+    /// Impersonate this user
+    Impersonate,
 }
 
 #[tokio::main]
@@ -119,10 +132,17 @@ async fn main() -> anyhow::Result<()> {
             (Some(OrgsSubcommand::Pick), _) => {
                 commands::orgs::pick().await?;
             }
-            (Some(OrgsSubcommand::Members), Some(org)) => {
-                commands::orgs::members(Some(org)).await?;
+            (Some(OrgsSubcommand::Members { user_id, action }), Some(org)) => {
+                commands::orgs::members(
+                    &org,
+                    user_id,
+                    action.map(|a| match a {
+                        MemberAction::Impersonate => commands::orgs::MemberAction::Impersonate,
+                    }),
+                )
+                .await?;
             }
-            (Some(OrgsSubcommand::Members), None) => {
+            (Some(OrgsSubcommand::Members { .. }), None) => {
                 anyhow::bail!(
                     "Organization slug required for 'members' command. Usage: clerk orgs <org> members"
                 );

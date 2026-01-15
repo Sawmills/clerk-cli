@@ -78,13 +78,27 @@ _clerk() {
                             && ret=0
                         ;;
                     (*)
-                        # Either no arg yet, or an org slug - offer orgs/subcommands then actions
-                        _arguments "${_arguments_options[@]}" : \
-                            '-h[Print help]' \
-                            '--help[Print help]' \
-                            '1::ORG or COMMAND:_clerk_orgs_and_subcommands' \
-                            '2::ACTION:_clerk_org_actions' \
-                            && ret=0
+                        local second_arg="${words[4]}"
+                        case $second_arg in
+                            (members)
+                                _arguments "${_arguments_options[@]}" : \
+                                    '-h[Print help]' \
+                                    '--help[Print help]' \
+                                    '1::ORG:' \
+                                    '2::ACTION:' \
+                                    '3::USER:_clerk_members' \
+                                    '4::MEMBER_ACTION:_clerk_member_actions' \
+                                    && ret=0
+                                ;;
+                            (*)
+                                _arguments "${_arguments_options[@]}" : \
+                                    '-h[Print help]' \
+                                    '--help[Print help]' \
+                                    '1::ORG or COMMAND:_clerk_orgs_and_subcommands' \
+                                    '2::ACTION:_clerk_org_actions' \
+                                    && ret=0
+                                ;;
+                        esac
                         ;;
                 esac
                 ;;
@@ -145,6 +159,24 @@ _clerk_org_actions() {
     local commands
     commands=(
         'members:List members of this organization'
+    )
+    _describe -t commands 'action' commands
+}
+
+_clerk_members() {
+    local org_slug="${words[3]}"
+    local -a members
+    local line
+    while IFS=: read -r user_id desc; do
+        members+=("${user_id}:${desc}")
+    done < <(clerk complete-users --org "$org_slug" 2>/dev/null)
+    _describe -t members 'member' members
+}
+
+_clerk_member_actions() {
+    local commands
+    commands=(
+        'impersonate:Impersonate this user'
     )
     _describe -t commands 'action' commands
 }
