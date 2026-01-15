@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/Sawmills/clerk-cli/compare/v0.3.0...v0.4.0) (2026-01-15)
+
+
+### Features
+
+* add jwt command for API testing ([8a02fc9](https://github.com/Sawmills/clerk-cli/commit/8a02fc9f21615b9ef09c317aeb114b509b93008e))
+
+
+### Bug Fixes
+
+* **ci:** check staged diff after git add for new files ([8796b9d](https://github.com/Sawmills/clerk-cli/commit/8796b9d9ef72b73389eef5d5d7783afc4ed553bb))
+* **ci:** use token auth for homebrew-tap clone/push ([d1fb6b4](https://github.com/Sawmills/clerk-cli/commit/d1fb6b411f05f2595982429c2ae50c2cbab043da))
+
 ## [0.3.0](https://github.com/Sawmills/clerk-cli/compare/v0.2.0...v0.3.0) (2026-01-15)
 
 
