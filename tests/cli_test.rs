@@ -39,8 +39,30 @@ fn cli_orgs_help() {
         .args(["orgs", "--help"])
         .assert()
         .success()
+        .stdout(predicate::str::contains("list"))
+        .stdout(predicate::str::contains("pick"))
+        .stdout(predicate::str::contains("members"));
+}
+
+#[test]
+fn cli_orgs_list_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "list", "--help"])
+        .assert()
+        .success()
         .stdout(predicate::str::contains("--limit"))
         .stdout(predicate::str::contains("--fuzzy"));
+}
+
+#[test]
+fn cli_orgs_members_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "members", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ORG"));
 }
 
 #[test]
