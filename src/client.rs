@@ -1,6 +1,6 @@
 use crate::models::{
-    ClerkError, CreateSignInTokenRequest, JwtTemplate, Organization, Session, SessionToken,
-    SignInToken, User,
+    ClerkError, CreateSignInTokenRequest, JwtTemplate, OrgMembership, OrgMembershipsResponse,
+    Organization, Session, SessionToken, SignInToken, User,
 };
 use reqwest::Client;
 use thiserror::Error;
@@ -233,6 +233,37 @@ impl ClerkClient {
             .as_str()
             .map(|s| s.to_string())
             .ok_or_else(|| ClerkClientError::Api("No session created".to_string()))
+    }
+
+    pub async fn list_org_memberships(
+        &self,
+        org_id: &str,
+        limit: u32,
+    ) -> Result<Vec<OrgMembership>, ClerkClientError> {
+        let url = format!(
+            "{}/organizations/{}/memberships?limit={}",
+            BASE_URL, org_id, limit
+        );
+
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        let wrapper: OrgMembershipsResponse = resp.json().await?;
+        Ok(wrapper.data)
     }
 }
 

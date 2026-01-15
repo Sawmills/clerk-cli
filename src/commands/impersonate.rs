@@ -1,5 +1,6 @@
 use crate::client::ClerkClient;
-use dialoguer::{Select, theme::ColorfulTheme};
+use crate::commands::orgs::pick_org;
+use dialoguer::FuzzySelect;
 
 pub async fn run(user_id: Option<String>) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
@@ -20,30 +21,33 @@ pub async fn run(user_id: Option<String>) -> anyhow::Result<()> {
 }
 
 async fn prompt_user_selection(client: &ClerkClient) -> anyhow::Result<String> {
-    let users = client.list_users(10, None).await?;
+    let org = pick_org(client).await?;
 
-    if users.is_empty() {
-        anyhow::bail!("No users found to impersonate.");
+    let memberships = client.list_org_memberships(&org.id, 100).await?;
+
+    if memberships.is_empty() {
+        anyhow::bail!("No users found in organization '{}'.", org.name);
     }
 
-    let items: Vec<String> = users
+    let display: Vec<String> = memberships
         .iter()
-        .map(|u| {
-            let email = u.primary_email().unwrap_or("No Email");
-            let name = u.display_name();
+        .map(|m| {
+            let name = m.public_user_data.display_name();
+            let email = m.public_user_data.identifier.as_deref().unwrap_or("no email");
+            let role = &m.role;
             if name.is_empty() {
-                format!("{} - {}", email, u.id)
+                format!("{} [{}]", email, role)
             } else {
-                format!("{} ({}) - {}", name, email, u.id)
+                format!("{} <{}> [{}]", name, email, role)
             }
         })
         .collect();
 
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Select a user to impersonate")
-        .items(&items)
+    let selection = FuzzySelect::new()
+        .with_prompt(format!("Select user from '{}'", org.name))
+        .items(&display)
         .default(0)
         .interact()?;
 
-    Ok(users[selection].id.clone())
+    Ok(memberships[selection].public_user_data.user_id.clone())
 }

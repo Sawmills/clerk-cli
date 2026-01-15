@@ -69,6 +69,39 @@ pub struct SessionToken {
     pub jwt: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct OrgMembershipsResponse {
+    pub data: Vec<OrgMembership>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct OrgMembership {
+    pub id: String,
+    pub role: String,
+    pub public_user_data: PublicUserData,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PublicUserData {
+    pub user_id: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub identifier: Option<String>,
+}
+
+impl PublicUserData {
+    pub fn display_name(&self) -> String {
+        match (&self.first_name, &self.last_name) {
+            (Some(f), Some(l)) => format!("{} {}", f, l),
+            (Some(f), None) => f.clone(),
+            (None, Some(l)) => l.clone(),
+            (None, None) => String::new(),
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ClerkErrorDetail {

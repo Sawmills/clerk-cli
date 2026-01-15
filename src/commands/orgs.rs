@@ -1,5 +1,6 @@
 use crate::client::ClerkClient;
 use comfy_table::{Table, presets::UTF8_FULL};
+use dialoguer::FuzzySelect;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
@@ -72,4 +73,65 @@ pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::R
     }
 
     Ok(())
+}
+
+pub async fn pick() -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+    let orgs = client.list_organizations(100).await?;
+
+    if orgs.is_empty() {
+        anyhow::bail!("No organizations found.");
+    }
+
+    let display: Vec<String> = orgs
+        .iter()
+        .map(|o| {
+            let members = o.members_count.map(|c| c.to_string()).unwrap_or_default();
+            format!(
+                "{} ({}) - {} members",
+                o.name,
+                o.slug.as_deref().unwrap_or("no-slug"),
+                members
+            )
+        })
+        .collect();
+
+    let selection = FuzzySelect::new()
+        .with_prompt("Select organization")
+        .items(&display)
+        .default(0)
+        .interact()?;
+
+    println!("{}", orgs[selection].id);
+
+    Ok(())
+}
+
+pub async fn pick_org(client: &ClerkClient) -> anyhow::Result<crate::models::Organization> {
+    let orgs = client.list_organizations(100).await?;
+
+    if orgs.is_empty() {
+        anyhow::bail!("No organizations found.");
+    }
+
+    let display: Vec<String> = orgs
+        .iter()
+        .map(|o| {
+            let members = o.members_count.map(|c| c.to_string()).unwrap_or_default();
+            format!(
+                "{} ({}) - {} members",
+                o.name,
+                o.slug.as_deref().unwrap_or("no-slug"),
+                members
+            )
+        })
+        .collect();
+
+    let selection = FuzzySelect::new()
+        .with_prompt("Select organization")
+        .items(&display)
+        .default(0)
+        .interact()?;
+
+    Ok(orgs.into_iter().nth(selection).unwrap())
 }

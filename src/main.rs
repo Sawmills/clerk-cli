@@ -29,6 +29,9 @@ enum Commands {
 
     /// List and fuzzy search organizations
     Orgs {
+        #[command(subcommand)]
+        subcommand: Option<OrgsSubcommand>,
+
         /// Number of orgs to fetch
         #[arg(short, long, default_value = "100")]
         limit: u32,
@@ -70,6 +73,12 @@ enum Commands {
     },
 }
 
+#[derive(Subcommand)]
+enum OrgsSubcommand {
+    /// Interactively pick an organization and print its ID
+    Pick,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
@@ -81,11 +90,16 @@ async fn main() -> anyhow::Result<()> {
             commands::users::run(limit, query).await?;
         }
         Commands::Orgs {
+            subcommand,
             limit,
             fuzzy,
             ids_only,
         } => {
-            commands::orgs::run(limit, fuzzy, ids_only).await?;
+            if let Some(OrgsSubcommand::Pick) = subcommand {
+                commands::orgs::pick().await?;
+            } else {
+                commands::orgs::run(limit, fuzzy, ids_only).await?;
+            }
         }
         Commands::Impersonate { user_id } => {
             commands::impersonate::run(user_id).await?;
