@@ -118,12 +118,15 @@ jobs:
           tag="${ref#refs/tags/}"
           tag="${tag#refs/}"
 
-          if [[ "${tag}" != v* ]]; then
-            echo "Not a v* tag (${tag}); skipping tap update."
+          # Support both v* and clerk-cli-v* tag formats
+          if [[ "${tag}" == clerk-cli-v* ]]; then
+            version="${tag#clerk-cli-v}"
+          elif [[ "${tag}" == v* ]]; then
+            version="${tag#v}"
+          else
+            echo "Not a recognized tag format (${tag}); skipping tap update."
             exit 0
           fi
-
-          version="${tag#v}"
           revision=$(git rev-parse HEAD)
 
           workdir=$(mktemp -d)
