@@ -27,26 +27,10 @@ enum Commands {
         query: Option<String>,
     },
 
-    /// List and fuzzy search organizations
+    /// Manage organizations
     Orgs {
         #[command(subcommand)]
-        subcommand: Option<OrgsSubcommand>,
-
-        /// Organization slug (for subcommands)
-        #[arg(global = true)]
-        org: Option<String>,
-
-        /// Number of orgs to fetch
-        #[arg(short, long, default_value = "100")]
-        limit: u32,
-
-        /// Fuzzy search by name
-        #[arg(short, long)]
-        fuzzy: Option<String>,
-
-        /// Output only org IDs (one per line)
-        #[arg(short, long)]
-        ids_only: bool,
+        subcommand: OrgsSubcommand,
     },
 
     /// Generate a sign-in link to impersonate a user
@@ -88,10 +72,27 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum OrgsSubcommand {
+    /// List all organizations
+    List {
+        /// Number of orgs to fetch
+        #[arg(short, long, default_value = "100")]
+        limit: u32,
+
+        /// Fuzzy search by name
+        #[arg(short, long)]
+        fuzzy: Option<String>,
+
+        /// Output only org IDs (one per line)
+        #[arg(short, long)]
+        ids_only: bool,
+    },
     /// Interactively pick an organization and print its ID
     Pick,
-    /// List members of the organization
-    Members,
+    /// List members of an organization
+    Members {
+        /// Organization slug or ID
+        org: String,
+    },
 }
 
 #[tokio::main]
@@ -104,21 +105,19 @@ async fn main() -> anyhow::Result<()> {
         Commands::Users { limit, query } => {
             commands::users::run(limit, query).await?;
         }
-        Commands::Orgs {
-            subcommand,
-            org,
-            limit,
-            fuzzy,
-            ids_only,
-        } => match subcommand {
-            Some(OrgsSubcommand::Pick) => {
+        Commands::Orgs { subcommand } => match subcommand {
+            OrgsSubcommand::List {
+                limit,
+                fuzzy,
+                ids_only,
+            } => {
+                commands::orgs::run(limit, fuzzy, ids_only).await?;
+            }
+            OrgsSubcommand::Pick => {
                 commands::orgs::pick().await?;
             }
-            Some(OrgsSubcommand::Members) => {
-                commands::orgs::members(org).await?;
-            }
-            None => {
-                commands::orgs::run(limit, fuzzy, ids_only).await?;
+            OrgsSubcommand::Members { org } => {
+                commands::orgs::members(Some(org)).await?;
             }
         },
         Commands::Impersonate { user_id } => {
@@ -136,8 +135,12 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Commands::Completions { shell } => {
-            let mut cmd = Cli::command();
-            generate(shell, &mut cmd, "clerk", &mut io::stdout());
+            if shell == Shell::Zsh {
+                print!("{}", include_str!("completions/clerk.zsh"));
+            } else {
+                let mut cmd = Cli::command();
+                generate(shell, &mut cmd, "clerk", &mut io::stdout());
+            }
         }
         Commands::CompleteOrgs => {
             commands::completions::complete_orgs().await?;
