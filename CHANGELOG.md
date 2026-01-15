@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Sawmills/clerk-cli/compare/v0.11.0...v0.12.0) (2026-01-15)
+
+
+### Features
+
+* **orgs:** add jwt template argument for member jwt action ([c7ba8b8](https://github.com/Sawmills/clerk-cli/commit/c7ba8b83631bb266221a2206651e83243966d7b4))
+
 ## [0.11.0](https://github.com/Sawmills/clerk-cli/compare/v0.10.0...v0.11.0) (2026-01-15)
 
 
