@@ -32,6 +32,10 @@ enum Commands {
         #[command(subcommand)]
         subcommand: Option<OrgsSubcommand>,
 
+        /// Organization slug (for subcommands)
+        #[arg(global = true)]
+        org: Option<String>,
+
         /// Number of orgs to fetch
         #[arg(short, long, default_value = "100")]
         limit: u32,
@@ -86,6 +90,8 @@ enum Commands {
 enum OrgsSubcommand {
     /// Interactively pick an organization and print its ID
     Pick,
+    /// List members of the organization
+    Members,
 }
 
 #[tokio::main]
@@ -100,16 +106,21 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Orgs {
             subcommand,
+            org,
             limit,
             fuzzy,
             ids_only,
-        } => {
-            if let Some(OrgsSubcommand::Pick) = subcommand {
+        } => match subcommand {
+            Some(OrgsSubcommand::Pick) => {
                 commands::orgs::pick().await?;
-            } else {
+            }
+            Some(OrgsSubcommand::Members) => {
+                commands::orgs::members(org).await?;
+            }
+            None => {
                 commands::orgs::run(limit, fuzzy, ids_only).await?;
             }
-        }
+        },
         Commands::Impersonate { user_id } => {
             commands::impersonate::run(user_id).await?;
         }

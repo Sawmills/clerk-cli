@@ -44,19 +44,10 @@ pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::R
 
     let mut table = Table::new();
     table.load_preset(UTF8_FULL);
-    table.set_header(vec!["ID", "Name", "Slug", "Members"]);
+    table.set_header(vec!["ID", "Name", "Slug"]);
 
     for org in &filtered {
-        let members = org
-            .members_count
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| "?".to_string());
-        table.add_row(vec![
-            &org.id,
-            &org.name,
-            org.slug.as_deref().unwrap_or(""),
-            &members,
-        ]);
+        table.add_row(vec![&org.id, &org.name, org.slug.as_deref().unwrap_or("")]);
     }
 
     println!("{table}");
@@ -147,4 +138,40 @@ pub async fn pick_org(client: &ClerkClient) -> anyhow::Result<crate::models::Org
     }
 
     anyhow::bail!("No organization selected.");
+}
+
+pub async fn members(org: Option<String>) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let org = match org {
+        Some(slug_or_id) => {
+            let orgs = client.list_organizations(100).await?;
+            orgs.into_iter()
+                .find(|o| o.slug.as_deref() == Some(&slug_or_id) || o.id == slug_or_id)
+                .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))?
+        }
+        None => pick_org(&client).await?,
+    };
+
+    let memberships = client.list_org_memberships(&org.id, 100).await?;
+
+    if memberships.is_empty() {
+        println!("No members found in '{}'.", org.name);
+        return Ok(());
+    }
+
+    let mut table = Table::new();
+    table.load_preset(UTF8_FULL);
+    table.set_header(vec!["User ID", "Name", "Email", "Role"]);
+
+    for m in &memberships {
+        let name = m.public_user_data.display_name();
+        let email = m.public_user_data.identifier.as_deref().unwrap_or("");
+        table.add_row(vec![&m.public_user_data.user_id, &name, email, &m.role]);
+    }
+
+    println!("{table}");
+    println!("Showing {} members of '{}'.", memberships.len(), org.name);
+
+    Ok(())
 }
