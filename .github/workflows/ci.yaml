@@ -24,3 +24,20 @@ jobs:
 
       - name: Build
         run: cargo build --release
+
+  trunk:
+    name: Trunk Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ${{ github.head_ref || github.ref }}-trunk
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Trunk Check
+        uses: trunk-io/trunk-action@v1
