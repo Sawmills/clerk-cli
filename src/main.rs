@@ -30,7 +30,10 @@ enum Commands {
     /// Manage organizations
     Orgs {
         #[command(subcommand)]
-        subcommand: OrgsSubcommand,
+        subcommand: Option<OrgsSubcommand>,
+
+        /// Organization slug or ID
+        org: Option<String>,
     },
 
     /// Generate a sign-in link to impersonate a user
@@ -88,11 +91,8 @@ enum OrgsSubcommand {
     },
     /// Interactively pick an organization and print its ID
     Pick,
-    /// List members of an organization
-    Members {
-        /// Organization slug or ID
-        org: String,
-    },
+    /// List members of the organization
+    Members,
 }
 
 #[tokio::main]
@@ -105,19 +105,33 @@ async fn main() -> anyhow::Result<()> {
         Commands::Users { limit, query } => {
             commands::users::run(limit, query).await?;
         }
-        Commands::Orgs { subcommand } => match subcommand {
-            OrgsSubcommand::List {
-                limit,
-                fuzzy,
-                ids_only,
-            } => {
+        Commands::Orgs { subcommand, org } => match (subcommand, org) {
+            (
+                Some(OrgsSubcommand::List {
+                    limit,
+                    fuzzy,
+                    ids_only,
+                }),
+                _,
+            ) => {
                 commands::orgs::run(limit, fuzzy, ids_only).await?;
             }
-            OrgsSubcommand::Pick => {
+            (Some(OrgsSubcommand::Pick), _) => {
                 commands::orgs::pick().await?;
             }
-            OrgsSubcommand::Members { org } => {
+            (Some(OrgsSubcommand::Members), Some(org)) => {
                 commands::orgs::members(Some(org)).await?;
+            }
+            (Some(OrgsSubcommand::Members), None) => {
+                anyhow::bail!(
+                    "Organization slug required for 'members' command. Usage: clerk orgs <org> members"
+                );
+            }
+            (None, Some(org)) => {
+                commands::orgs::show(&org).await?;
+            }
+            (None, None) => {
+                commands::orgs::run(100, None, false).await?;
             }
         },
         Commands::Impersonate { user_id } => {

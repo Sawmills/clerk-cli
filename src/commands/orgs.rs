@@ -175,3 +175,24 @@ pub async fn members(org: Option<String>) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+pub async fn show(slug_or_id: &str) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+    let orgs = client.list_organizations(100).await?;
+
+    let org = orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
+        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))?;
+
+    let mut table = Table::new();
+    table.load_preset(UTF8_FULL);
+    table.set_header(vec!["Field", "Value"]);
+    table.add_row(vec!["ID", &org.id]);
+    table.add_row(vec!["Name", &org.name]);
+    table.add_row(vec!["Slug", org.slug.as_deref().unwrap_or("")]);
+
+    println!("{table}");
+
+    Ok(())
+}

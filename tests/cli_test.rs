@@ -62,7 +62,7 @@ fn cli_orgs_members_help() {
         .args(["orgs", "members", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("ORG"));
+        .stdout(predicate::str::contains("List members"));
 }
 
 #[test]

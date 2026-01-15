@@ -11,6 +11,12 @@ _clerk_orgs() {
     _describe -t orgs 'organization' orgs
 }
 
+_clerk_orgs_and_subcommands() {
+    _alternative \
+        'orgs:organization:_clerk_orgs' \
+        'commands:subcommand:_clerk_orgs_subcommands'
+}
+
 _clerk() {
     typeset -A opt_args
     typeset -a _arguments_options
@@ -52,14 +58,11 @@ _clerk() {
                 _arguments "${_arguments_options[@]}" : \
                     '-h[Print help]' \
                     '--help[Print help]' \
-                    ":: :_clerk_orgs_subcommands" \
-                    "*::: :->orgs" \
+                    '1::ORG or COMMAND:_clerk_orgs_and_subcommands' \
+                    '*::: :->orgs_arg' \
                     && ret=0
                 case $state in
-                (orgs)
-                    words=($line[1] "${words[@]}")
-                    (( CURRENT += 1 ))
-                    curcontext="${curcontext%:*:*}:clerk-orgs-command-$line[1]:"
+                (orgs_arg)
                     case $line[1] in
                         (list)
                             _arguments "${_arguments_options[@]}" : \
@@ -80,10 +83,10 @@ _clerk() {
                                 && ret=0
                             ;;
                         (members)
+                            ;;
+                        (*)
                             _arguments "${_arguments_options[@]}" : \
-                                '-h[Print help]' \
-                                '--help[Print help]' \
-                                ':ORG:_clerk_orgs' \
+                                '1::SUBCOMMAND:_clerk_org_actions' \
                                 && ret=0
                             ;;
                     esac
@@ -138,9 +141,17 @@ _clerk_orgs_subcommands() {
     commands=(
         'list:List all organizations'
         'pick:Interactively pick an organization'
-        'members:List members of an organization'
+        'members:List members of the organization'
     )
-    _describe -t commands 'orgs subcommand' commands
+    _describe -t commands 'subcommand' commands
+}
+
+_clerk_org_actions() {
+    local commands
+    commands=(
+        'members:List members of this organization'
+    )
+    _describe -t commands 'action' commands
 }
 
 if [ "$funcstack[1]" = "_clerk" ]; then
