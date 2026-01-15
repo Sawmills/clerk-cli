@@ -81,12 +81,15 @@ _clerk() {
                     (*)
                         case $second_arg in
                             (members)
-                                # clerk orgs <org> members <user> <action>
-                                # CURRENT: 4=user, 5=action, 6+=done
+                                # clerk orgs <org> members <user> <action> [template]
+                                # CURRENT: 4=user, 5=action, 6=template (if jwt)
+                                local action_arg="${words[5]}"
                                 if (( CURRENT == 4 )); then
                                     _clerk_members && ret=0
                                 elif (( CURRENT == 5 )); then
                                     _clerk_member_actions && ret=0
+                                elif (( CURRENT == 6 )) && [[ "$action_arg" == "jwt" ]]; then
+                                    _clerk_jwt_templates && ret=0
                                 fi
                                 ;;
                             (*)
@@ -179,6 +182,15 @@ _clerk_member_actions() {
         'jwt:Generate a JWT for this user'
     )
     _describe -t commands 'action' commands
+}
+
+_clerk_jwt_templates() {
+    local -a templates
+    local line
+    while IFS=: read -r name desc; do
+        templates+=("${name}:${desc}")
+    done < <(clerk complete-jwt-templates 2>/dev/null)
+    _describe -t templates 'template' templates
 }
 
 if [ "$funcstack[1]" = "_clerk" ]; then

@@ -7,7 +7,7 @@ use nucleo_picker::{Picker, render::StrRenderer};
 
 pub enum MemberAction {
     Impersonate,
-    Jwt,
+    Jwt(Option<String>),
 }
 
 pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
@@ -163,8 +163,8 @@ pub async fn members(
         (Some(uid), Some(MemberAction::Impersonate)) => {
             impersonate::run(Some(uid)).await?;
         }
-        (Some(uid), Some(MemberAction::Jwt)) => {
-            jwt::run(Some(uid), None).await?;
+        (Some(uid), Some(MemberAction::Jwt(template))) => {
+            jwt::run(Some(uid), template).await?;
         }
         (Some(uid), None) => {
             anyhow::bail!(

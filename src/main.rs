@@ -71,6 +71,9 @@ enum Commands {
         #[arg(long)]
         org: Option<String>,
     },
+
+    #[command(hide = true)]
+    CompleteJwtTemplates,
 }
 
 #[derive(Subcommand)]
@@ -99,6 +102,9 @@ enum OrgsSubcommand {
         /// Action to perform on the user
         #[arg(value_enum)]
         action: Option<MemberAction>,
+
+        /// JWT template name (for jwt action)
+        template: Option<String>,
     },
 }
 
@@ -132,13 +138,20 @@ async fn main() -> anyhow::Result<()> {
             (Some(OrgsSubcommand::Pick), _) => {
                 commands::orgs::pick().await?;
             }
-            (Some(OrgsSubcommand::Members { user_id, action }), Some(org)) => {
+            (
+                Some(OrgsSubcommand::Members {
+                    user_id,
+                    action,
+                    template,
+                }),
+                Some(org),
+            ) => {
                 commands::orgs::members(
                     &org,
                     user_id,
                     action.map(|a| match a {
                         MemberAction::Impersonate => commands::orgs::MemberAction::Impersonate,
-                        MemberAction::Jwt => commands::orgs::MemberAction::Jwt,
+                        MemberAction::Jwt => commands::orgs::MemberAction::Jwt(template),
                     }),
                 )
                 .await?;
@@ -182,6 +195,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::CompleteUsers { org } => {
             commands::completions::complete_users(org).await?;
+        }
+        Commands::CompleteJwtTemplates => {
+            commands::completions::complete_jwt_templates().await?;
         }
     }
 

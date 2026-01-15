@@ -18,6 +18,35 @@ pub async fn complete_orgs() -> anyhow::Result<()> {
     Ok(())
 }
 
+pub async fn complete_jwt_templates() -> anyhow::Result<()> {
+    let Ok(client) = ClerkClient::new() else {
+        return Ok(());
+    };
+
+    let Ok(templates) = client.list_jwt_templates().await else {
+        return Ok(());
+    };
+
+    for t in templates {
+        let lifetime = format_lifetime(t.lifetime);
+        println!("{}:{} ({})", t.name, t.name, lifetime);
+    }
+
+    Ok(())
+}
+
+fn format_lifetime(seconds: u64) -> String {
+    if seconds >= 86400 {
+        format!("{}d", seconds / 86400)
+    } else if seconds >= 3600 {
+        format!("{}h", seconds / 3600)
+    } else if seconds >= 60 {
+        format!("{}m", seconds / 60)
+    } else {
+        format!("{}s", seconds)
+    }
+}
+
 pub async fn complete_users(org_slug: Option<String>) -> anyhow::Result<()> {
     let Ok(client) = ClerkClient::new() else {
         return Ok(());
