@@ -49,6 +49,28 @@ pub struct ClerkError {
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
+pub struct JwtTemplate {
+    pub id: String,
+    pub name: String,
+    pub lifetime: u64,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct Session {
+    pub id: String,
+    pub user_id: String,
+    pub status: String,
+    pub last_active_organization_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SessionToken {
+    pub jwt: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
 pub struct ClerkErrorDetail {
     pub message: String,
     pub code: String,

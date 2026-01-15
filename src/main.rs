@@ -48,6 +48,20 @@ enum Commands {
         user_id: Option<String>,
     },
 
+    /// Generate a JWT for API testing
+    Jwt {
+        /// User ID (interactive if omitted)
+        user_id: Option<String>,
+
+        /// JWT template name (interactive if omitted)
+        #[arg(short, long)]
+        template: Option<String>,
+
+        /// List available templates
+        #[arg(long)]
+        list: bool,
+    },
+
     /// Generate shell completions
     Completions {
         /// Shell to generate completions for
@@ -75,6 +89,17 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Impersonate { user_id } => {
             commands::impersonate::run(user_id).await?;
+        }
+        Commands::Jwt {
+            user_id,
+            template,
+            list,
+        } => {
+            if list {
+                commands::jwt::run_list_templates().await?;
+            } else {
+                commands::jwt::run(user_id, template).await?;
+            }
         }
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();

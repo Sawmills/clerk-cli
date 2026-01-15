@@ -1,4 +1,7 @@
-use crate::models::{ClerkError, CreateSignInTokenRequest, Organization, SignInToken, User};
+use crate::models::{
+    ClerkError, CreateSignInTokenRequest, JwtTemplate, Organization, Session, SessionToken,
+    SignInToken, User,
+};
 use reqwest::Client;
 use thiserror::Error;
 
@@ -121,6 +124,115 @@ impl ClerkClient {
         }
 
         Ok(resp.json().await?)
+    }
+
+    pub async fn list_jwt_templates(&self) -> Result<Vec<JwtTemplate>, ClerkClientError> {
+        let url = format!("{}/jwt_templates", BASE_URL);
+
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(resp.json().await?)
+    }
+
+    pub async fn list_sessions(
+        &self,
+        user_id: &str,
+        status: Option<&str>,
+    ) -> Result<Vec<Session>, ClerkClientError> {
+        let mut url = format!("{}/sessions?user_id={}", BASE_URL, user_id);
+        if let Some(s) = status {
+            url.push_str(&format!("&status={}", s));
+        }
+
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(resp.json().await?)
+    }
+
+    pub async fn create_session_token(
+        &self,
+        session_id: &str,
+        template_name: &str,
+    ) -> Result<SessionToken, ClerkClientError> {
+        let url = format!("{}/sessions/{}/tokens/{}", BASE_URL, session_id, template_name);
+
+        let resp = self
+            .client
+            .post(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(resp.json().await?)
+    }
+
+    pub async fn exchange_ticket_for_session(
+        &self,
+        ticket: &str,
+    ) -> Result<String, ClerkClientError> {
+        let frontend_url = std::env::var("CLERK_FRONTEND_API")
+            .unwrap_or_else(|_| "https://clerk.sawmills.ai".to_string());
+
+        let url = format!("{}/v1/client/sign_ins?_clerk_js_version=5", frontend_url);
+
+        let resp = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(format!("strategy=ticket&ticket={}", ticket))
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let text = resp.text().await?;
+            return Err(ClerkClientError::Api(format!("Failed to exchange ticket: {}", text)));
+        }
+
+        let json: serde_json::Value = resp.json().await?;
+        json["response"]["created_session_id"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| ClerkClientError::Api("No session created".to_string()))
     }
 }
 
