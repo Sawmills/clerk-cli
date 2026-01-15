@@ -28,6 +28,10 @@ lint:
   disabled:
     - checkov
     - yamllint
+  ignore:
+    - linters: [prettier]
+      paths:
+        - CHANGELOG.md
 actions:
   enabled:
     - trunk-upgrade-available
