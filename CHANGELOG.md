@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Sawmills/clerk-cli/compare/v0.10.0...v0.11.0) (2026-01-15)
+
+
+### Features
+
+* **orgs:** add jwt action for org members ([4177cfb](https://github.com/Sawmills/clerk-cli/commit/4177cfba9d968e1c98a05b26c1abf7ed4c695fe1))
+
 ## [0.10.0](https://github.com/Sawmills/clerk-cli/compare/v0.9.1...v0.10.0) (2026-01-15)
 
 
