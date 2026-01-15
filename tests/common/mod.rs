@@ -71,7 +71,9 @@ impl User {
                 .find(|e| &e.id == primary_id)
                 .map(|e| e.email_address.as_str())
         } else {
-            self.email_addresses.first().map(|e| e.email_address.as_str())
+            self.email_addresses
+                .first()
+                .map(|e| e.email_address.as_str())
         }
     }
 
@@ -91,7 +93,10 @@ impl TestClerkClient {
         limit: u32,
         query: Option<&str>,
     ) -> Result<Vec<User>, TestClientError> {
-        let mut url = format!("{}/v1/users?limit={}&order_by=-created_at", self.base_url, limit);
+        let mut url = format!(
+            "{}/v1/users?limit={}&order_by=-created_at",
+            self.base_url, limit
+        );
         if let Some(q) = query {
             url.push_str(&format!("&query={}", urlencoding::encode(q)));
         }
@@ -106,15 +111,24 @@ impl TestClerkClient {
         if !resp.status().is_success() {
             let err: ClerkError = resp.json().await?;
             return Err(TestClientError::Api(
-                err.errors.first().map(|e| e.message.clone()).unwrap_or_default(),
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
             ));
         }
 
         Ok(resp.json().await?)
     }
 
-    pub async fn list_organizations(&self, limit: u32) -> Result<Vec<Organization>, TestClientError> {
-        let url = format!("{}/v1/organizations?limit={}&order_by=-created_at", self.base_url, limit);
+    pub async fn list_organizations(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<Organization>, TestClientError> {
+        let url = format!(
+            "{}/v1/organizations?limit={}&order_by=-created_at",
+            self.base_url, limit
+        );
 
         let resp = self
             .client
@@ -126,7 +140,10 @@ impl TestClerkClient {
         if !resp.status().is_success() {
             let err: ClerkError = resp.json().await?;
             return Err(TestClientError::Api(
-                err.errors.first().map(|e| e.message.clone()).unwrap_or_default(),
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
             ));
         }
 
@@ -157,7 +174,10 @@ impl TestClerkClient {
         if !resp.status().is_success() {
             let err: ClerkError = resp.json().await?;
             return Err(TestClientError::Api(
-                err.errors.first().map(|e| e.message.clone()).unwrap_or_default(),
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
             ));
         }
 

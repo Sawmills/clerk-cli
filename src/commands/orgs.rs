@@ -1,7 +1,7 @@
 use crate::client::ClerkClient;
-use comfy_table::{presets::UTF8_FULL, Table};
-use fuzzy_matcher::skim::SkimMatcherV2;
+use comfy_table::{Table, presets::UTF8_FULL};
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;

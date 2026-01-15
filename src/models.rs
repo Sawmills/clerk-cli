@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct User {
     pub id: String,
@@ -17,6 +18,7 @@ pub struct EmailAddress {
     pub email_address: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct Organization {
     pub id: String,
@@ -26,6 +28,7 @@ pub struct Organization {
     pub created_at: i64,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct SignInToken {
     pub id: String,
@@ -44,6 +47,7 @@ pub struct ClerkError {
     pub errors: Vec<ClerkErrorDetail>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ClerkErrorDetail {
     pub message: String,
@@ -58,7 +62,9 @@ impl User {
                 .find(|e| &e.id == primary_id)
                 .map(|e| e.email_address.as_str())
         } else {
-            self.email_addresses.first().map(|e| e.email_address.as_str())
+            self.email_addresses
+                .first()
+                .map(|e| e.email_address.as_str())
         }
     }
 

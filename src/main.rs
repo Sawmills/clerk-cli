@@ -3,7 +3,7 @@ mod commands;
 mod models;
 
 use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 use std::io;
 
 #[derive(Parser)]
@@ -66,7 +66,11 @@ async fn main() -> anyhow::Result<()> {
         Commands::Users { limit, query } => {
             commands::users::run(limit, query).await?;
         }
-        Commands::Orgs { limit, fuzzy, ids_only } => {
+        Commands::Orgs {
+            limit,
+            fuzzy,
+            ids_only,
+        } => {
             commands::orgs::run(limit, fuzzy, ids_only).await?;
         }
         Commands::Impersonate { user_id } => {

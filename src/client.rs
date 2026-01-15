@@ -21,8 +21,8 @@ pub struct ClerkClient {
 
 impl ClerkClient {
     pub fn new() -> Result<Self, ClerkClientError> {
-        let api_key = std::env::var("CLERK_API_KEY")
-            .map_err(|_| ClerkClientError::MissingApiKey)?;
+        let api_key =
+            std::env::var("CLERK_API_KEY").map_err(|_| ClerkClientError::MissingApiKey)?;
 
         Ok(Self {
             client: Client::new(),
@@ -50,15 +50,24 @@ impl ClerkClient {
         if !resp.status().is_success() {
             let err: ClerkError = resp.json().await?;
             return Err(ClerkClientError::Api(
-                err.errors.first().map(|e| e.message.clone()).unwrap_or_default(),
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
             ));
         }
 
         Ok(resp.json().await?)
     }
 
-    pub async fn list_organizations(&self, limit: u32) -> Result<Vec<Organization>, ClerkClientError> {
-        let url = format!("{}/organizations?limit={}&order_by=-created_at", BASE_URL, limit);
+    pub async fn list_organizations(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<Organization>, ClerkClientError> {
+        let url = format!(
+            "{}/organizations?limit={}&order_by=-created_at",
+            BASE_URL, limit
+        );
 
         let resp = self
             .client
@@ -70,7 +79,10 @@ impl ClerkClient {
         if !resp.status().is_success() {
             let err: ClerkError = resp.json().await?;
             return Err(ClerkClientError::Api(
-                err.errors.first().map(|e| e.message.clone()).unwrap_or_default(),
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
             ));
         }
 
@@ -101,7 +113,10 @@ impl ClerkClient {
         if !resp.status().is_success() {
             let err: ClerkError = resp.json().await?;
             return Err(ClerkClientError::Api(
-                err.errors.first().map(|e| e.message.clone()).unwrap_or_default(),
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
             ));
         }
 

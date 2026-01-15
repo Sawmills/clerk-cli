@@ -1,5 +1,5 @@
 use crate::client::ClerkClient;
-use dialoguer::{theme::ColorfulTheme, Select};
+use dialoguer::{Select, theme::ColorfulTheme};
 
 pub async fn run(user_id: Option<String>) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;

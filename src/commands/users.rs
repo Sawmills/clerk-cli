@@ -1,5 +1,5 @@
 use crate::client::ClerkClient;
-use comfy_table::{presets::UTF8_FULL, Table};
+use comfy_table::{Table, presets::UTF8_FULL};
 
 pub async fn run(limit: u32, query: Option<String>) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
