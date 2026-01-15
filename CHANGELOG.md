@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/Sawmills/clerk-cli/compare/v0.8.0...v0.9.0) (2026-01-15)
+
+
+### Features
+
+* support 'clerk orgs &lt;org&gt;' and 'clerk orgs &lt;org&gt; members' syntax ([5263f57](https://github.com/Sawmills/clerk-cli/commit/5263f57d4f14ab0dfb6bc6c7401f94135c837a3d))
+
 ## [0.8.0](https://github.com/Sawmills/clerk-cli/compare/v0.7.0...v0.8.0) (2026-01-15)
 
 
