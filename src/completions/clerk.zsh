@@ -55,42 +55,37 @@ _clerk() {
                     && ret=0
                 ;;
             (orgs)
-                _arguments "${_arguments_options[@]}" : \
-                    '-h[Print help]' \
-                    '--help[Print help]' \
-                    '1::ORG or COMMAND:_clerk_orgs_and_subcommands' \
-                    '*::: :->orgs_arg' \
-                    && ret=0
-                case $state in
-                (orgs_arg)
-                    case $line[1] in
-                        (list)
-                            _arguments "${_arguments_options[@]}" : \
-                                '-l+[Number of orgs to fetch]:LIMIT:' \
-                                '--limit=[Number of orgs to fetch]:LIMIT:' \
-                                '-f+[Fuzzy search by name]:FUZZY:_clerk_orgs' \
-                                '--fuzzy=[Fuzzy search by name]:FUZZY:_clerk_orgs' \
-                                '-i[Output only org IDs]' \
-                                '--ids-only[Output only org IDs]' \
-                                '-h[Print help]' \
-                                '--help[Print help]' \
-                                && ret=0
-                            ;;
-                        (pick)
-                            _arguments "${_arguments_options[@]}" : \
-                                '-h[Print help]' \
-                                '--help[Print help]' \
-                                && ret=0
-                            ;;
-                        (members)
-                            ;;
-                        (*)
-                            _arguments "${_arguments_options[@]}" : \
-                                '1::SUBCOMMAND:_clerk_org_actions' \
-                                && ret=0
-                            ;;
-                    esac
-                    ;;
+                # Check what the first arg is to determine completion behavior
+                # words array is (orgs orgs <arg1> <arg2>...) after prepend at line 43
+                local first_arg="${words[3]}"
+                case $first_arg in
+                    (list)
+                        _arguments "${_arguments_options[@]}" : \
+                            '-l+[Number of orgs to fetch]:LIMIT:' \
+                            '--limit=[Number of orgs to fetch]:LIMIT:' \
+                            '-f+[Fuzzy search by name]:FUZZY:_clerk_orgs' \
+                            '--fuzzy=[Fuzzy search by name]:FUZZY:_clerk_orgs' \
+                            '-i[Output only org IDs]' \
+                            '--ids-only[Output only org IDs]' \
+                            '-h[Print help]' \
+                            '--help[Print help]' \
+                            && ret=0
+                        ;;
+                    (pick)
+                        _arguments "${_arguments_options[@]}" : \
+                            '-h[Print help]' \
+                            '--help[Print help]' \
+                            && ret=0
+                        ;;
+                    (*)
+                        # Either no arg yet, or an org slug - offer orgs/subcommands then actions
+                        _arguments "${_arguments_options[@]}" : \
+                            '-h[Print help]' \
+                            '--help[Print help]' \
+                            '1::ORG or COMMAND:_clerk_orgs_and_subcommands' \
+                            '2::ACTION:_clerk_org_actions' \
+                            && ret=0
+                        ;;
                 esac
                 ;;
             (impersonate)
