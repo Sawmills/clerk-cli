@@ -13,8 +13,14 @@ _clerk_orgs() {
 
 _clerk_orgs_and_subcommands() {
     _alternative \
-        'orgs:organization:_clerk_orgs' \
-        'commands:subcommand:_clerk_orgs_subcommands'
+        'commands:subcommand:_clerk_orgs_subcommands' \
+        'orgs:organization:_clerk_orgs'
+}
+
+_clerk_users_and_subcommands() {
+    _alternative \
+        'commands:subcommand:_clerk_users_subcommands' \
+        'users:user:_clerk_all_users'
 }
 
 _clerk() {
@@ -43,16 +49,85 @@ _clerk() {
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
         curcontext="${curcontext%:*:*}:clerk-command-$line[1]:"
+
         case $line[1] in
             (users)
-                _arguments "${_arguments_options[@]}" : \
-                    '-l+[Number of users to fetch]:LIMIT:' \
-                    '--limit=[Number of users to fetch]:LIMIT:' \
-                    '-q+[Search query (email/name)]:QUERY:' \
-                    '--query=[Search query (email/name)]:QUERY:' \
-                    '-h[Print help]' \
-                    '--help[Print help]' \
-                    && ret=0
+                local first_arg="${words[2]}"
+                local second_arg="${words[3]}"
+                case $first_arg in
+                    (list)
+                        _arguments "${_arguments_options[@]}" : \
+                            '-l+[Number of users to fetch]:LIMIT:' \
+                            '--limit=[Number of users to fetch]:LIMIT:' \
+                            '-q+[Search query (email/name)]:QUERY:' \
+                            '--query=[Search query (email/name)]:QUERY:' \
+                            '-h[Print help]' \
+                            '--help[Print help]' \
+                            && ret=0
+                        ;;
+                    (create)
+                        _arguments "${_arguments_options[@]}" : \
+                            '-e+[Email address]:EMAIL:' \
+                            '--email=[Email address]:EMAIL:' \
+                            '-f+[First name]:FIRST_NAME:' \
+                            '--first-name=[First name]:FIRST_NAME:' \
+                            '-l+[Last name]:LAST_NAME:' \
+                            '--last-name=[Last name]:LAST_NAME:' \
+                            '-p+[Password]:PASSWORD:' \
+                            '--password=[Password]:PASSWORD:' \
+                            '-h[Print help]' \
+                            '--help[Print help]' \
+                            && ret=0
+                        ;;
+                    (*)
+                        case $second_arg in
+                            (impersonate)
+                                _arguments "${_arguments_options[@]}" : \
+                                    '-h[Print help]' \
+                                    '--help[Print help]' \
+                                    && ret=0
+                                ;;
+                            (jwt)
+                                if (( CURRENT == 4 )); then
+                                    _clerk_jwt_templates && ret=0
+                                fi
+                                ;;
+                            (add-to-org)
+                                local -a cmd_words=("add-to-org" "${words[@]:3}")
+                                local cmd_current=$((CURRENT - 2))
+                                words=("${cmd_words[@]}")
+                                CURRENT=$cmd_current
+                                _arguments "${_arguments_options[@]}" : \
+                                    '-o+[Organization slug or ID]:ORG:_clerk_orgs' \
+                                    '--org=[Organization slug or ID]:ORG:_clerk_orgs' \
+                                    '-r+[Role]:ROLE:(org:admin org:member)' \
+                                    '--role=[Role]:ROLE:(org:admin org:member)' \
+                                    '-h[Print help]' \
+                                    '--help[Print help]' \
+                                    && ret=0
+                                ;;
+                            (remove-from-org)
+                                local -a cmd_words=("remove-from-org" "${words[@]:3}")
+                                local cmd_current=$((CURRENT - 2))
+                                words=("${cmd_words[@]}")
+                                CURRENT=$cmd_current
+                                _arguments "${_arguments_options[@]}" : \
+                                    '-o+[Organization slug or ID]:ORG:_clerk_orgs' \
+                                    '--org=[Organization slug or ID]:ORG:_clerk_orgs' \
+                                    '-h[Print help]' \
+                                    '--help[Print help]' \
+                                    && ret=0
+                                ;;
+                            (*)
+                                if (( CURRENT == 2 )); then
+                                    _clerk_users_and_subcommands && ret=0
+                                elif (( CURRENT == 3 )); then
+                                    _clerk_user_actions && ret=0
+                                fi
+                                ;;
+                        esac
+                        ;;
+                esac
                 ;;
             (orgs)
                 # After word manipulation: words=(orgs <arg1> <arg2> ...)
@@ -78,17 +153,49 @@ _clerk() {
                             '--help[Print help]' \
                             && ret=0
                         ;;
+                    (create)
+                        _arguments "${_arguments_options[@]}" : \
+                            '-n+[Organization name]:NAME:' \
+                            '--name=[Organization name]:NAME:' \
+                            '-s+[Organization slug]:SLUG:' \
+                            '--slug=[Organization slug]:SLUG:' \
+                            '-h[Print help]' \
+                            '--help[Print help]' \
+                            && ret=0
+                        ;;
                     (*)
                         case $second_arg in
                             (members)
                                 # clerk orgs <org> members <user> <action> [template]
-                                # CURRENT: 4=user, 5=action, 6=template (if jwt)
+                                # clerk orgs <org> members add -u <user> -r <role>
+                                # words=(orgs <org> members [user|add] [action] [template])
+                                # words[4]=user|add, words[5]=action, CURRENT=position being completed
+                                local member_arg="${words[4]}"
                                 local action_arg="${words[5]}"
-                                if (( CURRENT == 4 )); then
-                                    _clerk_members && ret=0
+                                if [[ "$member_arg" == "add" ]]; then
+                                    # Shift context for _arguments to work with "add" subcommand
+                                    local -a add_words=("add" "${words[@]:4}")
+                                    local add_current=$((CURRENT - 3))
+                                    words=("${add_words[@]}")
+                                    CURRENT=$add_current
+                                    _arguments "${_arguments_options[@]}" : \
+                                        '-u+[User ID to add]:USER_ID:_clerk_all_users' \
+                                        '--user=[User ID to add]:USER_ID:_clerk_all_users' \
+                                        '-r+[Role for the new member]:ROLE:(org:admin org:member)' \
+                                        '--role=[Role for the new member]:ROLE:(org:admin org:member)' \
+                                        '-h[Print help]' \
+                                        '--help[Print help]' \
+                                        && ret=0
+                                elif (( CURRENT == 4 )); then
+                                    _alternative \
+                                        'actions:action:(add)' \
+                                        'members:member:_clerk_members' \
+                                    && ret=0
                                 elif (( CURRENT == 5 )); then
+                                    # Position after <user> - show member actions
                                     _clerk_member_actions && ret=0
                                 elif (( CURRENT == 6 )) && [[ "$action_arg" == "jwt" ]]; then
+                                    # Position after "jwt" - show templates
                                     _clerk_jwt_templates && ret=0
                                 fi
                                 ;;
@@ -138,7 +245,7 @@ _clerk() {
 _clerk_commands() {
     local commands
     commands=(
-        'users:List and search users'
+        'users:Manage users'
         'orgs:Manage organizations'
         'impersonate:Generate a sign-in link to impersonate a user'
         'jwt:Generate a JWT for API testing'
@@ -147,10 +254,31 @@ _clerk_commands() {
     _describe -t commands 'clerk commands' commands
 }
 
+_clerk_users_subcommands() {
+    local commands
+    commands=(
+        'list:List and search users'
+        'create:Create a new user'
+    )
+    _describe -t commands 'subcommand' commands
+}
+
+_clerk_user_actions() {
+    local commands
+    commands=(
+        'impersonate:Impersonate this user'
+        'jwt:Generate a JWT for this user'
+        'add-to-org:Add this user to an organization'
+        'remove-from-org:Remove this user from an organization'
+    )
+    _describe -t commands 'action' commands
+}
+
 _clerk_orgs_subcommands() {
     local commands
     commands=(
         'list:List all organizations'
+        'create:Create a new organization'
         'pick:Interactively pick an organization'
         'members:List members of the organization'
     )
@@ -173,6 +301,15 @@ _clerk_members() {
         members+=("${user_id}:${desc}")
     done < <(clerk complete-users --org "$org_slug" 2>/dev/null)
     _describe -t members 'member' members
+}
+
+_clerk_all_users() {
+    local -a users
+    local line
+    while IFS=: read -r user_id desc; do
+        users+=("${user_id}:${desc}")
+    done < <(clerk complete-users 2>/dev/null)
+    _describe -t users 'user' users
 }
 
 _clerk_member_actions() {

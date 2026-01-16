@@ -42,6 +42,33 @@ pub struct CreateSignInTokenRequest {
     pub expires_in_seconds: u32,
 }
 
+#[derive(Debug, Default, Serialize)]
+pub struct CreateUserRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email_address: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skip_password_requirement: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateOrganizationRequest {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateOrgMembershipRequest {
+    pub user_id: String,
+    pub role: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ClerkError {
     pub errors: Vec<ClerkErrorDetail>,

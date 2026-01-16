@@ -1,13 +1,15 @@
 use crate::client::ClerkClient;
 use crate::commands::{impersonate, jwt};
-use comfy_table::{Table, presets::UTF8_FULL};
-use fuzzy_matcher::FuzzyMatcher;
+use crate::models::{CreateOrgMembershipRequest, CreateOrganizationRequest};
+use comfy_table::{presets::UTF8_FULL, Table};
 use fuzzy_matcher::skim::SkimMatcherV2;
-use nucleo_picker::{Picker, render::StrRenderer};
+use fuzzy_matcher::FuzzyMatcher;
+use nucleo_picker::{render::StrRenderer, Picker};
 
 pub enum MemberAction {
     Impersonate,
     Jwt(Option<String>),
+    Add { user_id: String, role: String },
 }
 
 pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
@@ -166,9 +168,14 @@ pub async fn members(
         (Some(uid), Some(MemberAction::Jwt(template))) => {
             jwt::run(Some(uid), template).await?;
         }
+        (_, Some(MemberAction::Add { user_id, role })) => {
+            let request = CreateOrgMembershipRequest { user_id: user_id.clone(), role };
+            let membership = client.create_org_membership(&org.id, request).await?;
+            println!("Added user {} to '{}' as {}", user_id, org.name, membership.role);
+        }
         (Some(uid), None) => {
             anyhow::bail!(
-                "Action required for user. Usage: clerk orgs {} members {} impersonate|jwt",
+                "Action required for user. Usage: clerk orgs {} members {} impersonate|jwt|add",
                 org_slug,
                 uid
             );
@@ -216,6 +223,22 @@ pub async fn show(slug_or_id: &str) -> anyhow::Result<()> {
     table.add_row(vec!["Slug", org.slug.as_deref().unwrap_or("")]);
 
     println!("{table}");
+
+    Ok(())
+}
+
+pub async fn create(name: String, slug: Option<String>) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let request = CreateOrganizationRequest { name, slug };
+
+    let org = client.create_organization(request).await?;
+
+    println!("Created organization: {}", org.id);
+    println!("Name: {}", org.name);
+    if let Some(slug) = &org.slug {
+        println!("Slug: {}", slug);
+    }
 
     Ok(())
 }
