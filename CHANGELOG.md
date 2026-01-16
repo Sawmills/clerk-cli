@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/Sawmills/clerk-cli/compare/v0.13.0...v0.14.0) (2026-01-16)
+
+
+### Features
+
+* **orgs:** add delete command with confirmation prompt ([a2bc6f6](https://github.com/Sawmills/clerk-cli/commit/a2bc6f6d4e460ad2d8c7804d7bb127c96d14b7f9))
+
 ## [0.13.0](https://github.com/Sawmills/clerk-cli/compare/v0.12.0...v0.13.0) (2026-01-16)
 
 
