@@ -56,6 +56,11 @@ _clerk() {
                 local second_arg="${words[3]}"
                 case $first_arg in
                     (list)
+                        # Shift context for _arguments to work with "list" subcommand
+                        local -a list_words=("list" "${words[@]:2}")
+                        local list_current=$((CURRENT - 1))
+                        words=("${list_words[@]}")
+                        CURRENT=$list_current
                         _arguments "${_arguments_options[@]}" : \
                             '-l+[Number of users to fetch]:LIMIT:' \
                             '--limit=[Number of users to fetch]:LIMIT:' \
@@ -66,6 +71,11 @@ _clerk() {
                             && ret=0
                         ;;
                     (create)
+                        # Shift context for _arguments to work with "create" subcommand
+                        local -a create_words=("create" "${words[@]:2}")
+                        local create_current=$((CURRENT - 1))
+                        words=("${create_words[@]}")
+                        CURRENT=$create_current
                         _arguments "${_arguments_options[@]}" : \
                             '-e+[Email address]:EMAIL:' \
                             '--email=[Email address]:EMAIL:' \
@@ -136,6 +146,11 @@ _clerk() {
                 local second_arg="${words[3]}"
                 case $first_arg in
                     (list)
+                        # Shift context for _arguments to work with "list" subcommand
+                        local -a list_words=("list" "${words[@]:2}")
+                        local list_current=$((CURRENT - 1))
+                        words=("${list_words[@]}")
+                        CURRENT=$list_current
                         _arguments "${_arguments_options[@]}" : \
                             '-l+[Number of orgs to fetch]:LIMIT:' \
                             '--limit=[Number of orgs to fetch]:LIMIT:' \
@@ -148,12 +163,23 @@ _clerk() {
                             && ret=0
                         ;;
                     (pick)
+                        # Shift context for _arguments to work with "pick" subcommand
+                        local -a pick_words=("pick" "${words[@]:2}")
+                        local pick_current=$((CURRENT - 1))
+                        words=("${pick_words[@]}")
+                        CURRENT=$pick_current
                         _arguments "${_arguments_options[@]}" : \
                             '-h[Print help]' \
                             '--help[Print help]' \
                             && ret=0
                         ;;
                     (create)
+                        # Shift context for _arguments to work with "create" subcommand
+                        # words=(orgs create ...) -> words=(create ...)
+                        local -a create_words=("create" "${words[@]:2}")
+                        local create_current=$((CURRENT - 1))
+                        words=("${create_words[@]}")
+                        CURRENT=$create_current
                         _arguments "${_arguments_options[@]}" : \
                             '-n+[Organization name]:NAME:' \
                             '--name=[Organization name]:NAME:' \
@@ -198,6 +224,19 @@ _clerk() {
                                     # Position after "jwt" - show templates
                                     _clerk_jwt_templates && ret=0
                                 fi
+                                ;;
+                            (delete)
+                                # Shift context for _arguments
+                                local -a del_words=("delete" "${words[@]:3}")
+                                local del_current=$((CURRENT - 2))
+                                words=("${del_words[@]}")
+                                CURRENT=$del_current
+                                _arguments "${_arguments_options[@]}" : \
+                                    '-f[Skip confirmation prompt]' \
+                                    '--force[Skip confirmation prompt]' \
+                                    '-h[Print help]' \
+                                    '--help[Print help]' \
+                                    && ret=0
                                 ;;
                             (*)
                                 _arguments "${_arguments_options[@]}" : \
@@ -281,6 +320,7 @@ _clerk_orgs_subcommands() {
         'create:Create a new organization'
         'pick:Interactively pick an organization'
         'members:List members of the organization'
+        'delete:Delete this organization'
     )
     _describe -t commands 'subcommand' commands
 }
@@ -289,6 +329,7 @@ _clerk_org_actions() {
     local commands
     commands=(
         'members:List members of this organization'
+        'delete:Delete this organization'
     )
     _describe -t commands 'action' commands
 }

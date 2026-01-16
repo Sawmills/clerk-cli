@@ -122,6 +122,12 @@ enum OrgsSubcommand {
         #[arg(short, long, default_value = "org:member")]
         role: String,
     },
+    /// Delete this organization
+    Delete {
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -256,6 +262,14 @@ async fn main() -> anyhow::Result<()> {
             (Some(OrgsSubcommand::Members { .. }), None) => {
                 anyhow::bail!(
                     "Organization slug required for 'members' command. Usage: clerk orgs <org> members"
+                );
+            }
+            (Some(OrgsSubcommand::Delete { force }), Some(org)) => {
+                commands::orgs::delete(&org, force).await?;
+            }
+            (Some(OrgsSubcommand::Delete { .. }), None) => {
+                anyhow::bail!(
+                    "Organization slug required for 'delete' command. Usage: clerk orgs <org> delete"
                 );
             }
             (None, Some(org)) => {

@@ -401,6 +401,29 @@ impl ClerkClient {
 
         Ok(resp.json().await?)
     }
+
+    pub async fn delete_organization(&self, org_id: &str) -> Result<(), ClerkClientError> {
+        let url = format!("{}/organizations/{}", BASE_URL, org_id);
+
+        let resp = self
+            .client
+            .delete(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(serde::Deserialize)]

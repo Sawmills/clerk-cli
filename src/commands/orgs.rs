@@ -242,3 +242,34 @@ pub async fn create(name: String, slug: Option<String>) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+pub async fn delete(slug_or_id: &str, force: bool) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+    let orgs = client.list_organizations(100).await?;
+
+    let org = orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
+        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))?;
+
+    if !force {
+        println!(
+            "Are you sure you want to delete organization '{}' ({})? [y/N]",
+            org.name,
+            org.slug.as_deref().unwrap_or(&org.id)
+        );
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+
+        if !input.trim().eq_ignore_ascii_case("y") {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+
+    client.delete_organization(&org.id).await?;
+    println!("Deleted organization: {} ({})", org.name, org.id);
+
+    Ok(())
+}
