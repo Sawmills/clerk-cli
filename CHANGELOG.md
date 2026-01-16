@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Sawmills/clerk-cli/compare/v0.12.0...v0.13.0) (2026-01-16)
+
+
+### Features
+
+* add user management commands and improve completions ([f23d96f](https://github.com/Sawmills/clerk-cli/commit/f23d96fee8e13202279b6540eb2c6d5580d8a890))
+
 ## [0.12.0](https://github.com/Sawmills/clerk-cli/compare/v0.11.0...v0.12.0) (2026-01-15)
 
 
