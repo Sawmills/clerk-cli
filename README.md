@@ -59,6 +59,23 @@ clerk orgs <org> delete                  # Delete (with confirmation)
 clerk orgs <org> delete --force          # Delete (skip confirmation)
 ```
 
+### SSO Connections
+
+```bash
+clerk orgs <org> sso list                # List SSO connections
+clerk orgs <org> sso add \               # Add SAML connection
+  --name "Okta" \
+  --provider saml_okta \
+  --domain "example.com"
+clerk orgs <org> sso update "Okta" \     # Update by name or ID
+  --metadata-url "https://..." \
+  --active true
+clerk orgs <org> sso delete "Okta"       # Delete (with confirmation)
+clerk orgs <org> sso delete "Okta" -f    # Delete (skip confirmation)
+```
+
+Providers: `saml_okta`, `saml_google`, `saml_microsoft`, `saml_custom`
+
 ### JWT Generation
 
 ```bash
@@ -140,6 +157,21 @@ clerk orgs $ORG_ID members
 ```bash
 TOKEN=$(clerk jwt user_xxx -t my-api-template)
 curl -H "Authorization: Bearer $TOKEN" https://api.example.com/endpoint
+```
+
+### Configure SSO for an organization
+
+```bash
+# Step 1: Create connection, get ACS URL and SP Entity ID
+clerk orgs acme sso add --name "Okta" --provider saml_okta --domain "acme.com"
+# Output: ACS URL and SP Entity ID to configure in your IdP
+
+# Step 2: Configure your IdP with the ACS URL and SP Entity ID
+
+# Step 3: Update connection with IdP metadata
+clerk orgs acme sso update "Okta" \
+  --metadata-url "https://acme.okta.com/app/.../sso/saml/metadata" \
+  --active true
 ```
 
 ## Environment Variables
