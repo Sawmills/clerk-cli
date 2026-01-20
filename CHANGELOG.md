@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/Sawmills/clerk-cli/compare/v0.14.0...v0.15.0) (2026-01-20)
+
+
+### New Features
+
+* **orgs:** add SSO connection management ([e4f9298](https://github.com/Sawmills/clerk-cli/commit/e4f9298fff5bb1b95131652fb1ecbcda34cee4ea))
+
 ## [0.14.0](https://github.com/Sawmills/clerk-cli/compare/v0.13.0...v0.14.0) (2026-01-16)
 
 
