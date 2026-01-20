@@ -1,10 +1,13 @@
 use crate::client::ClerkClient;
 use crate::commands::{impersonate, jwt};
-use crate::models::{CreateOrgMembershipRequest, CreateOrganizationRequest};
-use comfy_table::{presets::UTF8_FULL, Table};
-use fuzzy_matcher::skim::SkimMatcherV2;
+use crate::models::{
+    CreateOrgMembershipRequest, CreateOrganizationRequest, CreateSamlConnectionRequest,
+    UpdateSamlConnectionRequest,
+};
+use comfy_table::{Table, presets::UTF8_FULL};
 use fuzzy_matcher::FuzzyMatcher;
-use nucleo_picker::{render::StrRenderer, Picker};
+use fuzzy_matcher::skim::SkimMatcherV2;
+use nucleo_picker::{Picker, render::StrRenderer};
 
 pub enum MemberAction {
     Impersonate,
@@ -169,9 +172,15 @@ pub async fn members(
             jwt::run(Some(uid), template).await?;
         }
         (_, Some(MemberAction::Add { user_id, role })) => {
-            let request = CreateOrgMembershipRequest { user_id: user_id.clone(), role };
+            let request = CreateOrgMembershipRequest {
+                user_id: user_id.clone(),
+                role,
+            };
             let membership = client.create_org_membership(&org.id, request).await?;
-            println!("Added user {} to '{}' as {}", user_id, org.name, membership.role);
+            println!(
+                "Added user {} to '{}' as {}",
+                user_id, org.name, membership.role
+            );
         }
         (Some(uid), None) => {
             anyhow::bail!(
@@ -270,6 +279,215 @@ pub async fn delete(slug_or_id: &str, force: bool) -> anyhow::Result<()> {
 
     client.delete_organization(&org.id).await?;
     println!("Deleted organization: {} ({})", org.name, org.id);
+
+    Ok(())
+}
+
+pub struct CreateSamlArgs {
+    pub name: String,
+    pub provider: String,
+    pub domain: String,
+    pub entity_id: Option<String>,
+    pub sso_url: Option<String>,
+    pub certificate: Option<String>,
+    pub metadata_url: Option<String>,
+}
+
+pub async fn add_sso(org_slug: &str, args: CreateSamlArgs) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let orgs = client.list_organizations(100).await?;
+    let org = orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
+        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+
+    let request = CreateSamlConnectionRequest {
+        name: args.name,
+        provider: args.provider,
+        domain: args.domain,
+        organization_id: Some(org.id),
+        idp_entity_id: args.entity_id,
+        idp_sso_url: args.sso_url,
+        idp_certificate: args.certificate,
+        idp_metadata_url: args.metadata_url,
+    };
+
+    let conn = client.create_saml_connection(request).await?;
+
+    println!("Created SAML Connection: {}", conn.id);
+    println!("Name: {}", conn.name);
+    println!("Provider: {}", conn.provider);
+    println!("Domain: {}", conn.domain);
+    println!("ACS URL: {}", conn.acs_url);
+    println!("SP Entity ID: {}", conn.sp_entity_id);
+    println!("SP Metadata URL: {}", conn.sp_metadata_url);
+
+    Ok(())
+}
+
+pub struct UpdateSamlArgs {
+    pub name: Option<String>,
+    pub provider: Option<String>,
+    pub domain: Option<String>,
+    pub active: Option<bool>,
+    pub entity_id: Option<String>,
+    pub sso_url: Option<String>,
+    pub certificate: Option<String>,
+    pub metadata_url: Option<String>,
+}
+
+pub async fn list_sso(org_slug: &str) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let orgs = client.list_organizations(100).await?;
+    let org = orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
+        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+
+    let connections = client.list_saml_connections(Some(&org.id)).await?;
+
+    if connections.is_empty() {
+        println!("No SSO connections found for '{}'.", org.name);
+        return Ok(());
+    }
+
+    let mut table = Table::new();
+    table.load_preset(UTF8_FULL);
+    table.set_header(vec!["ID", "Name", "Provider", "Domain", "Active"]);
+
+    for conn in &connections {
+        let active = if conn.active { "Yes" } else { "No" };
+        table.add_row(vec![
+            conn.id.as_str(),
+            conn.name.as_str(),
+            conn.provider.as_str(),
+            conn.domain.as_str(),
+            active,
+        ]);
+    }
+
+    println!("{table}");
+    println!(
+        "Showing {} SSO connection(s) for '{}'.",
+        connections.len(),
+        org.name
+    );
+
+    Ok(())
+}
+
+pub async fn update_sso(
+    org_slug: &str,
+    name_or_id: &str,
+    args: UpdateSamlArgs,
+) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let orgs = client.list_organizations(100).await?;
+    let org = orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
+        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+
+    let connections = client.list_saml_connections(Some(&org.id)).await?;
+    let conn = connections
+        .into_iter()
+        .find(|c| c.id == name_or_id || c.name == name_or_id)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "SSO connection '{}' not found in organization '{}'",
+                name_or_id,
+                org.name
+            )
+        })?;
+
+    let request = UpdateSamlConnectionRequest {
+        name: args.name,
+        provider: args.provider,
+        domain: args.domain,
+        active: args.active,
+        idp_entity_id: args.entity_id,
+        idp_sso_url: args.sso_url,
+        idp_certificate: args.certificate,
+        idp_metadata_url: args.metadata_url,
+        organization_id: None,
+    };
+
+    let updated = client.update_saml_connection(&conn.id, request).await?;
+
+    println!("Updated SAML Connection: {}", updated.id);
+    println!("Name: {}", updated.name);
+    println!("Provider: {}", updated.provider);
+    println!("Domain: {}", updated.domain);
+    println!("Active: {}", updated.active);
+    println!("ACS URL: {}", updated.acs_url);
+    println!("SP Entity ID: {}", updated.sp_entity_id);
+    println!("SP Metadata URL: {}", updated.sp_metadata_url);
+
+    Ok(())
+}
+
+pub async fn delete_sso(org_slug: &str, name_or_id: &str, force: bool) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let orgs = client.list_organizations(100).await?;
+    let org = orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
+        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+
+    let connections = client.list_saml_connections(Some(&org.id)).await?;
+    let conn = connections
+        .into_iter()
+        .find(|c| c.id == name_or_id || c.name == name_or_id)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "SSO connection '{}' not found in organization '{}'",
+                name_or_id,
+                org.name
+            )
+        })?;
+
+    if !force {
+        println!(
+            "Are you sure you want to delete SSO connection '{}' ({})? [y/N]",
+            conn.name, conn.id
+        );
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+
+        if !input.trim().eq_ignore_ascii_case("y") {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+
+    client.delete_saml_connection(&conn.id).await?;
+    println!("Deleted SSO connection: {} ({})", conn.name, conn.id);
+
+    Ok(())
+}
+
+pub async fn complete_sso_connections(org_slug: &str) -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let orgs = client.list_organizations(100).await?;
+    let org = match orgs
+        .into_iter()
+        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
+    {
+        Some(o) => o,
+        None => return Ok(()),
+    };
+
+    let connections = client.list_saml_connections(Some(&org.id)).await?;
+
+    for conn in connections {
+        println!("{}:{} ({})", conn.name, conn.domain, conn.provider);
+    }
 
     Ok(())
 }

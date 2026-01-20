@@ -101,7 +101,10 @@ pub async fn add_to_org(user_id: &str, org_slug: &str, role: &str) -> anyhow::Re
     };
 
     let membership = client.create_org_membership(&org.id, request).await?;
-    println!("Added user {} to '{}' with role {}", user_id, org.name, membership.role);
+    println!(
+        "Added user {} to '{}' with role {}",
+        user_id, org.name, membership.role
+    );
 
     Ok(())
 }

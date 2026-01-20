@@ -72,6 +72,12 @@ enum Commands {
 
     #[command(hide = true)]
     CompleteJwtTemplates,
+
+    #[command(hide = true)]
+    CompleteSsoConnections {
+        #[arg(long)]
+        org: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -128,6 +134,93 @@ enum OrgsSubcommand {
         #[arg(short, long)]
         force: bool,
     },
+    /// Manage SSO connections
+    Sso {
+        #[command(subcommand)]
+        subcommand: SsoSubcommand,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SsoSubcommand {
+    /// List SSO connections
+    List,
+    /// Add a SAML connection
+    Add {
+        /// Connection name
+        #[arg(short, long)]
+        name: String,
+
+        /// SAML provider
+        #[arg(short, long, value_enum)]
+        provider: SamlProvider,
+
+        /// Domain to associate with this connection
+        #[arg(short, long)]
+        domain: String,
+
+        /// IdP Entity ID
+        #[arg(long)]
+        entity_id: Option<String>,
+
+        /// IdP SSO URL
+        #[arg(long)]
+        sso_url: Option<String>,
+
+        /// IdP Certificate (PEM format)
+        #[arg(long)]
+        certificate: Option<String>,
+
+        /// IdP Metadata URL
+        #[arg(long)]
+        metadata_url: Option<String>,
+    },
+    /// Update a SAML connection
+    Update {
+        /// Connection name or ID
+        name_or_id: String,
+
+        /// New connection name
+        #[arg(short, long)]
+        name: Option<String>,
+
+        /// SAML provider
+        #[arg(short, long, value_enum)]
+        provider: Option<SamlProvider>,
+
+        /// Domain to associate with this connection
+        #[arg(short, long)]
+        domain: Option<String>,
+
+        /// Set connection as active/inactive
+        #[arg(long)]
+        active: Option<bool>,
+
+        /// IdP Entity ID
+        #[arg(long)]
+        entity_id: Option<String>,
+
+        /// IdP SSO URL
+        #[arg(long)]
+        sso_url: Option<String>,
+
+        /// IdP Certificate (PEM format)
+        #[arg(long)]
+        certificate: Option<String>,
+
+        /// IdP Metadata URL
+        #[arg(long)]
+        metadata_url: Option<String>,
+    },
+    /// Delete a SAML connection
+    Delete {
+        /// Connection name or ID
+        name_or_id: String,
+
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 #[derive(Clone, ValueEnum)]
@@ -135,6 +228,33 @@ enum MemberAction {
     Impersonate,
     Jwt,
     Add,
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum SamlProvider {
+    /// Okta
+    #[value(name = "saml_okta")]
+    Okta,
+    /// Google Workspace
+    #[value(name = "saml_google")]
+    Google,
+    /// Microsoft Entra ID (Azure AD)
+    #[value(name = "saml_microsoft")]
+    Microsoft,
+    /// Custom SAML IdP
+    #[value(name = "saml_custom")]
+    Custom,
+}
+
+impl SamlProvider {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SamlProvider::Okta => "saml_okta",
+            SamlProvider::Google => "saml_google",
+            SamlProvider::Microsoft => "saml_microsoft",
+            SamlProvider::Custom => "saml_custom",
+        }
+    }
 }
 
 #[derive(Subcommand)]
@@ -164,9 +284,7 @@ enum UsersSubcommand {
     /// Impersonate this user
     Impersonate,
     /// Generate a JWT for this user
-    Jwt {
-        template: Option<String>,
-    },
+    Jwt { template: Option<String> },
     /// Add this user to an organization
     AddToOrg {
         #[arg(short, long)]
@@ -193,7 +311,15 @@ async fn main() -> anyhow::Result<()> {
             (Some(UsersSubcommand::List { limit, query }), _) => {
                 commands::users::list(limit, query).await?;
             }
-            (Some(UsersSubcommand::Create { email, first_name, last_name, password }), _) => {
+            (
+                Some(UsersSubcommand::Create {
+                    email,
+                    first_name,
+                    last_name,
+                    password,
+                }),
+                _,
+            ) => {
                 commands::users::create(email, first_name, last_name, password).await?;
             }
             (Some(UsersSubcommand::Impersonate), Some(user)) => {
@@ -208,7 +334,15 @@ async fn main() -> anyhow::Result<()> {
             (Some(UsersSubcommand::RemoveFromOrg { org }), Some(user)) => {
                 commands::users::remove_from_org(&user, &org).await?;
             }
-            (Some(UsersSubcommand::Impersonate | UsersSubcommand::Jwt { .. } | UsersSubcommand::AddToOrg { .. } | UsersSubcommand::RemoveFromOrg { .. }), None) => {
+            (
+                Some(
+                    UsersSubcommand::Impersonate
+                    | UsersSubcommand::Jwt { .. }
+                    | UsersSubcommand::AddToOrg { .. }
+                    | UsersSubcommand::RemoveFromOrg { .. },
+                ),
+                None,
+            ) => {
                 anyhow::bail!("User ID required. Usage: clerk users <user_id> <action>");
             }
             (None, Some(user)) => {
@@ -272,6 +406,89 @@ async fn main() -> anyhow::Result<()> {
                     "Organization slug required for 'delete' command. Usage: clerk orgs <org> delete"
                 );
             }
+            (
+                Some(OrgsSubcommand::Sso {
+                    subcommand: SsoSubcommand::List,
+                }),
+                Some(org),
+            ) => {
+                commands::orgs::list_sso(&org).await?;
+            }
+            (
+                Some(OrgsSubcommand::Sso {
+                    subcommand:
+                        SsoSubcommand::Add {
+                            name,
+                            provider,
+                            domain,
+                            entity_id,
+                            sso_url,
+                            certificate,
+                            metadata_url,
+                        },
+                }),
+                Some(org),
+            ) => {
+                commands::orgs::add_sso(
+                    &org,
+                    commands::orgs::CreateSamlArgs {
+                        name,
+                        provider: provider.as_str().to_string(),
+                        domain,
+                        entity_id,
+                        sso_url,
+                        certificate,
+                        metadata_url,
+                    },
+                )
+                .await?;
+            }
+            (
+                Some(OrgsSubcommand::Sso {
+                    subcommand:
+                        SsoSubcommand::Update {
+                            name_or_id,
+                            name,
+                            provider,
+                            domain,
+                            active,
+                            entity_id,
+                            sso_url,
+                            certificate,
+                            metadata_url,
+                        },
+                }),
+                Some(org),
+            ) => {
+                commands::orgs::update_sso(
+                    &org,
+                    &name_or_id,
+                    commands::orgs::UpdateSamlArgs {
+                        name,
+                        provider: provider.map(|p| p.as_str().to_string()),
+                        domain,
+                        active,
+                        entity_id,
+                        sso_url,
+                        certificate,
+                        metadata_url,
+                    },
+                )
+                .await?;
+            }
+            (
+                Some(OrgsSubcommand::Sso {
+                    subcommand: SsoSubcommand::Delete { name_or_id, force },
+                }),
+                Some(org),
+            ) => {
+                commands::orgs::delete_sso(&org, &name_or_id, force).await?;
+            }
+            (Some(OrgsSubcommand::Sso { .. }), None) => {
+                anyhow::bail!(
+                    "Organization slug required for 'sso' command. Usage: clerk orgs <org> sso <subcommand>"
+                );
+            }
             (None, Some(org)) => {
                 commands::orgs::show(&org).await?;
             }
@@ -309,6 +526,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::CompleteJwtTemplates => {
             commands::completions::complete_jwt_templates().await?;
+        }
+        Commands::CompleteSsoConnections { org } => {
+            commands::orgs::complete_sso_connections(&org).await?;
         }
     }
 

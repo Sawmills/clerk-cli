@@ -238,6 +238,69 @@ _clerk() {
                                     '--help[Print help]' \
                                     && ret=0
                                 ;;
+                            (sso)
+                                local sso_cmd="${words[4]}"
+                                if (( CURRENT == 4 )); then
+                                    _clerk_sso_subcommands && ret=0
+                                elif [[ "$sso_cmd" == "list" ]]; then
+                                    _arguments "${_arguments_options[@]}" : \
+                                        '-h[Print help]' \
+                                        '--help[Print help]' \
+                                        && ret=0
+                                elif [[ "$sso_cmd" == "add" ]]; then
+                                    local -a add_words=("add" "${words[@]:4}")
+                                    local add_current=$((CURRENT - 3))
+                                    words=("${add_words[@]}")
+                                    CURRENT=$add_current
+                                    _arguments "${_arguments_options[@]}" : \
+                                        '-n+[Connection name]:NAME:' \
+                                        '--name=[Connection name]:NAME:' \
+                                        '-p+[SAML provider]:PROVIDER:_clerk_saml_providers' \
+                                        '--provider=[SAML provider]:PROVIDER:_clerk_saml_providers' \
+                                        '-d+[Domain]:DOMAIN:' \
+                                        '--domain=[Domain]:DOMAIN:' \
+                                        '--entity-id=[IdP Entity ID]:ENTITY_ID:' \
+                                        '--sso-url=[IdP SSO URL]:SSO_URL:' \
+                                        '--certificate=[IdP Certificate]:CERTIFICATE:' \
+                                        '--metadata-url=[IdP Metadata URL]:METADATA_URL:' \
+                                        '-h[Print help]' \
+                                        '--help[Print help]' \
+                                        && ret=0
+                                elif [[ "$sso_cmd" == "update" ]]; then
+                                    local -a upd_words=("update" "${words[@]:4}")
+                                    local upd_current=$((CURRENT - 3))
+                                    words=("${upd_words[@]}")
+                                    CURRENT=$upd_current
+                                    _arguments "${_arguments_options[@]}" : \
+                                        '1:CONNECTION:_clerk_sso_connections' \
+                                        '-n+[New connection name]:NAME:' \
+                                        '--name=[New connection name]:NAME:' \
+                                        '-p+[SAML provider]:PROVIDER:_clerk_saml_providers' \
+                                        '--provider=[SAML provider]:PROVIDER:_clerk_saml_providers' \
+                                        '-d+[Domain]:DOMAIN:' \
+                                        '--domain=[Domain]:DOMAIN:' \
+                                        '--active=[Set active state]:ACTIVE:(true false)' \
+                                        '--entity-id=[IdP Entity ID]:ENTITY_ID:' \
+                                        '--sso-url=[IdP SSO URL]:SSO_URL:' \
+                                        '--certificate=[IdP Certificate]:CERTIFICATE:' \
+                                        '--metadata-url=[IdP Metadata URL]:METADATA_URL:' \
+                                        '-h[Print help]' \
+                                        '--help[Print help]' \
+                                        && ret=0
+                                elif [[ "$sso_cmd" == "delete" ]]; then
+                                    local -a del_words=("delete" "${words[@]:4}")
+                                    local del_current=$((CURRENT - 3))
+                                    words=("${del_words[@]}")
+                                    CURRENT=$del_current
+                                    _arguments "${_arguments_options[@]}" : \
+                                        '1:CONNECTION:_clerk_sso_connections' \
+                                        '-f[Skip confirmation prompt]' \
+                                        '--force[Skip confirmation prompt]' \
+                                        '-h[Print help]' \
+                                        '--help[Print help]' \
+                                        && ret=0
+                                fi
+                                ;;
                             (*)
                                 _arguments "${_arguments_options[@]}" : \
                                     '-h[Print help]' \
@@ -321,6 +384,7 @@ _clerk_orgs_subcommands() {
         'pick:Interactively pick an organization'
         'members:List members of the organization'
         'delete:Delete this organization'
+        'sso:Manage SSO connections'
     )
     _describe -t commands 'subcommand' commands
 }
@@ -330,8 +394,41 @@ _clerk_org_actions() {
     commands=(
         'members:List members of this organization'
         'delete:Delete this organization'
+        'sso:Manage SSO connections'
     )
     _describe -t commands 'action' commands
+}
+
+_clerk_sso_subcommands() {
+    local commands
+    commands=(
+        'list:List SSO connections'
+        'add:Add a SAML connection'
+        'update:Update a SAML connection'
+        'delete:Delete a SAML connection'
+    )
+    _describe -t commands 'subcommand' commands
+}
+
+_clerk_sso_connections() {
+    local org_slug="${words[2]}"
+    local -a connections
+    local line
+    while IFS=: read -r name desc; do
+        connections+=("${name}:${desc}")
+    done < <(clerk complete-sso-connections --org "$org_slug" 2>/dev/null)
+    _describe -t connections 'connection' connections
+}
+
+_clerk_saml_providers() {
+    local providers
+    providers=(
+        'saml_okta:Okta'
+        'saml_google:Google Workspace'
+        'saml_microsoft:Microsoft Entra ID (Azure AD)'
+        'saml_custom:Custom SAML IdP'
+    )
+    _describe -t providers 'provider' providers
 }
 
 _clerk_members() {

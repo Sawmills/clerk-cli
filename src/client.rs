@@ -1,7 +1,8 @@
 use crate::models::{
-    ClerkError, CreateOrgMembershipRequest, CreateOrganizationRequest, CreateSignInTokenRequest,
-    CreateUserRequest, JwtTemplate, OrgMembership, OrgMembershipsResponse, Organization, Session,
-    SessionToken, SignInToken, User,
+    ClerkError, CreateOrgMembershipRequest, CreateOrganizationRequest, CreateSamlConnectionRequest,
+    CreateSignInTokenRequest, CreateUserRequest, JwtTemplate, OrgMembership,
+    OrgMembershipsResponse, Organization, SamlConnection, SamlConnectionsResponse, Session,
+    SessionToken, SignInToken, UpdateSamlConnectionRequest, User,
 };
 use reqwest::Client;
 use thiserror::Error;
@@ -357,7 +358,10 @@ impl ClerkClient {
         org_id: &str,
         user_id: &str,
     ) -> Result<(), ClerkClientError> {
-        let url = format!("{}/organizations/{}/memberships/{}", BASE_URL, org_id, user_id);
+        let url = format!(
+            "{}/organizations/{}/memberships/{}",
+            BASE_URL, org_id, user_id
+        );
 
         let resp = self
             .client
@@ -386,6 +390,117 @@ impl ClerkClient {
             .client
             .get(&url)
             .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(resp.json().await?)
+    }
+
+    pub async fn list_saml_connections(
+        &self,
+        organization_id: Option<&str>,
+    ) -> Result<Vec<SamlConnection>, ClerkClientError> {
+        let mut url = format!("{}/saml_connections?limit=100", BASE_URL);
+        if let Some(org_id) = organization_id {
+            url.push_str(&format!("&organization_id={}", org_id));
+        }
+
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        let wrapper: SamlConnectionsResponse = resp.json().await?;
+        Ok(wrapper.data)
+    }
+
+    pub async fn create_saml_connection(
+        &self,
+        request: CreateSamlConnectionRequest,
+    ) -> Result<SamlConnection, ClerkClientError> {
+        let url = format!("{}/saml_connections", BASE_URL);
+
+        let resp = self
+            .client
+            .post(&url)
+            .bearer_auth(&self.api_key)
+            .json(&request)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(resp.json().await?)
+    }
+
+    pub async fn delete_saml_connection(
+        &self,
+        connection_id: &str,
+    ) -> Result<(), ClerkClientError> {
+        let url = format!("{}/saml_connections/{}", BASE_URL, connection_id);
+
+        let resp = self
+            .client
+            .delete(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(ClerkClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub async fn update_saml_connection(
+        &self,
+        connection_id: &str,
+        request: UpdateSamlConnectionRequest,
+    ) -> Result<SamlConnection, ClerkClientError> {
+        let url = format!("{}/saml_connections/{}", BASE_URL, connection_id);
+
+        let resp = self
+            .client
+            .patch(&url)
+            .bearer_auth(&self.api_key)
+            .json(&request)
             .send()
             .await?;
 

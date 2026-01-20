@@ -69,6 +69,59 @@ pub struct CreateOrgMembershipRequest {
     pub role: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct CreateSamlConnectionRequest {
+    pub name: String,
+    pub provider: String,
+    pub domain: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_entity_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_sso_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_certificate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_metadata_url: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UpdateSamlConnectionRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_entity_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_sso_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_certificate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idp_metadata_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct SamlConnection {
+    pub id: String,
+    pub name: String,
+    pub provider: String,
+    pub domain: String,
+    pub active: bool,
+    pub organization_id: Option<String>,
+    pub acs_url: String,
+    pub sp_entity_id: String,
+    pub sp_metadata_url: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ClerkError {
     pub errors: Vec<ClerkErrorDetail>,
@@ -99,6 +152,11 @@ pub struct SessionToken {
 #[derive(Debug, Deserialize)]
 pub struct OrgMembershipsResponse {
     pub data: Vec<OrgMembership>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SamlConnectionsResponse {
+    pub data: Vec<SamlConnection>,
 }
 
 #[allow(dead_code)]

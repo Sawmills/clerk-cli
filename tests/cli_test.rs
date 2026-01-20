@@ -158,3 +158,171 @@ fn cli_unknown_command() {
         .assert()
         .failure();
 }
+
+#[test]
+fn cli_orgs_sso_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("list"))
+        .stdout(predicate::str::contains("add"))
+        .stdout(predicate::str::contains("update"));
+}
+
+#[test]
+fn cli_orgs_sso_list_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "list", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("List SSO connections"));
+}
+
+#[test]
+fn cli_orgs_sso_add_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "add", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--name"))
+        .stdout(predicate::str::contains("--provider"))
+        .stdout(predicate::str::contains("--domain"))
+        .stdout(predicate::str::contains("--metadata-url"));
+}
+
+#[test]
+fn cli_orgs_sso_add_shows_providers() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "add", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("saml_okta"))
+        .stdout(predicate::str::contains("saml_google"))
+        .stdout(predicate::str::contains("saml_microsoft"))
+        .stdout(predicate::str::contains("saml_custom"));
+}
+
+#[test]
+fn cli_orgs_sso_update_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "update", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--name"))
+        .stdout(predicate::str::contains("--active"))
+        .stdout(predicate::str::contains("--metadata-url"));
+}
+
+#[test]
+fn cli_orgs_sso_add_requires_name() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args([
+            "orgs",
+            "test-org",
+            "sso",
+            "add",
+            "--provider",
+            "saml_okta",
+            "--domain",
+            "test.com",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--name"));
+}
+
+#[test]
+fn cli_orgs_sso_add_requires_provider() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args([
+            "orgs", "test-org", "sso", "add", "--name", "Test", "--domain", "test.com",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--provider"));
+}
+
+#[test]
+fn cli_orgs_sso_add_requires_domain() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args([
+            "orgs",
+            "test-org",
+            "sso",
+            "add",
+            "--name",
+            "Test",
+            "--provider",
+            "saml_okta",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--domain"));
+}
+
+#[test]
+fn cli_orgs_sso_add_validates_provider() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args([
+            "orgs",
+            "test-org",
+            "sso",
+            "add",
+            "--name",
+            "Test",
+            "--provider",
+            "invalid_provider",
+            "--domain",
+            "test.com",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid"));
+}
+
+#[test]
+fn cli_orgs_sso_update_requires_connection() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "update"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn cli_orgs_sso_requires_org() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "sso", "list"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn cli_orgs_sso_delete_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "delete", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--force"));
+}
+
+#[test]
+fn cli_orgs_sso_delete_requires_connection() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["orgs", "test-org", "sso", "delete"])
+        .assert()
+        .failure();
+}
