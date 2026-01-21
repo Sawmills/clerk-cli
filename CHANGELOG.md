@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/Sawmills/clerk-cli/compare/v0.16.0...v0.17.0) (2026-01-21)
+
+
+### New Features
+
+* **orgs:** add --id-only flag for scripting ([006a313](https://github.com/Sawmills/clerk-cli/commit/006a3134219f50eb29f8e3b079339803b5de0301))
+
 ## [0.16.0](https://github.com/Sawmills/clerk-cli/compare/v0.15.0...v0.16.0) (2026-01-21)
 
 
