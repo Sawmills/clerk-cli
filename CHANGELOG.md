@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Sawmills/clerk-cli/compare/v0.15.0...v0.16.0) (2026-01-21)
+
+
+### New Features
+
+* **sso:** add top-level sso list command ([a98f90a](https://github.com/Sawmills/clerk-cli/commit/a98f90a1eb4ca70e958be7260ffed525eee47ad2))
+
 ## [0.15.0](https://github.com/Sawmills/clerk-cli/compare/v0.14.0...v0.15.0) (2026-01-20)
 
 
