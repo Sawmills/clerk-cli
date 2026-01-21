@@ -150,7 +150,7 @@ class ClerkAPI {
 
   **Commit**: YES - `feat(raycast): add search users command`
 
-- [ ] 5. Implement Impersonate User command
+- [x] 5. Implement Impersonate User command
 
   **What to do**:
   - Create `src/impersonate-user.tsx`
@@ -159,9 +159,9 @@ class ClerkAPI {
   - Open sign-in URL in browser
 
   **Acceptance Criteria**:
-  - [ ] Generates sign-in token
-  - [ ] Opens URL in default browser
-  - [ ] Shows success toast
+  - [x] Generates sign-in token
+  - [x] Opens URL in default browser
+  - [x] Shows success toast
 
   **Commit**: YES - `feat(raycast): add impersonate command`
 
