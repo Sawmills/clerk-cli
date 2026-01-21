@@ -78,3 +78,95 @@ src/api/clerk.ts
 3. ✅ All 7 required methods implemented
 4. ✅ All response types properly defined
 5. ✅ Error handling matches Rust client behavior
+
+## Task 3-8: Command Implementations
+
+### React/TypeScript Compatibility Issue
+- **Problem**: TypeScript 5.2 + @types/react 18.2.27 caused JSX component type errors
+- **Solution**: Downgraded @types/react to 18.0.38
+- **Root Cause**: Known incompatibility between React 18 types and TypeScript 5.2
+- **Lesson**: Check @types/react version compatibility when using latest TypeScript
+
+### Raycast Component Patterns
+1. **List Component**: Primary UI for searchable lists
+   - Use `throttle` prop for better performance
+   - Use `List.EmptyView` for empty states
+   - Use `accessories` for secondary info (IDs, roles, etc.)
+
+2. **ActionPanel**: Container for actions
+   - `Action.CopyToClipboard`: Copy text to clipboard
+   - `Action.Push`: Navigate to another view
+   - `Action.onAction`: Execute immediate action
+
+3. **Navigation**: Use `Action.Push` with component instances
+   ```typescript
+   <Action.Push target={<Component prop={value} />} />
+   ```
+
+4. **Toast Notifications**: Three styles
+   - `Toast.Style.Animated`: Loading states
+   - `Toast.Style.Success`: Success messages
+   - `Toast.Style.Failure`: Error messages
+
+### Debounced Search Pattern
+```typescript
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (searchText) {
+      loadData(searchText);
+    }
+  }, 500);
+  return () => clearTimeout(timer);
+}, [searchText]);
+```
+- 500ms delay prevents excessive API calls
+- Cleanup function cancels pending timers
+- Essential for server-side search
+
+### Multi-Step Flows
+- Use state to track current step: `useState<"step1" | "step2">("step1")`
+- Conditionally render different views based on step
+- Pass data between steps via state
+- Example: User selection → Template selection → Action
+
+### Component Reusability
+- Export components for use in other commands
+- Accept optional props for flexibility (e.g., `userId?: string`)
+- Handle both standalone and navigation modes
+- Return `null` when no UI needed (e.g., immediate action)
+
+### Error Handling Best Practices
+1. Always wrap API calls in try-catch
+2. Show user-friendly error messages in toasts
+3. Set loading state in finally block
+4. Handle specific error cases (e.g., "no active sessions")
+
+### Raycast Extension Structure
+```
+extensions/raycast/
+├── package.json          # Extension manifest
+├── tsconfig.json         # TypeScript config
+├── README.md             # Documentation
+├── assets/               # Icons, screenshots (auto-generated)
+├── src/
+│   ├── api/
+│   │   └── clerk.ts      # API client
+│   ├── search-organizations.tsx
+│   ├── search-users.tsx
+│   ├── impersonate-user.tsx
+│   ├── generate-jwt.tsx
+│   └── org-members.tsx
+└── dist/                 # Build output
+```
+
+### Build and Development
+- `npm run build`: Production build
+- `npm run dev`: Development mode (hot reload)
+- `npm run lint`: Check code style
+- `npm run fix-lint`: Auto-fix linting issues
+
+### Raycast Assets
+- Scaffolding includes default assets (icons, screenshots)
+- Replace with custom assets for production
+- Icon requirements: 512x512 PNG with transparency
+- Screenshots optional but recommended for store listing

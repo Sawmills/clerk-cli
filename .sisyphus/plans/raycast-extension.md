@@ -22,13 +22,13 @@ Build a Raycast extension that provides quick access to Clerk admin operations.
 - Publishable to Raycast Store (optional)
 
 ### Definition of Done
-- [ ] Extension scaffolded with Raycast template
-- [ ] Search Organizations command working
-- [ ] Search Users command working  
-- [ ] Impersonate User command working
-- [ ] Generate JWT command working
-- [ ] List Org Members command working
-- [ ] README with setup instructions
+- [x] Extension scaffolded with Raycast template
+- [x] Search Organizations command working
+- [x] Search Users command working  
+- [x] Impersonate User command working
+- [x] Generate JWT command working
+- [x] List Org Members command working
+- [x] README with setup instructions
 
 ---
 
