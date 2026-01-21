@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/Sawmills/clerk-cli/compare/v0.17.0...v0.18.0) (2026-01-21)
+
+
+### New Features
+
+* **orgs:** add --copy flag to copy org ID to clipboard ([aa42a7c](https://github.com/Sawmills/clerk-cli/commit/aa42a7c41ba6655cf5b132358b7bdb994a9b8837))
+
 ## [0.17.0](https://github.com/Sawmills/clerk-cli/compare/v0.16.0...v0.17.0) (2026-01-21)
 
 
