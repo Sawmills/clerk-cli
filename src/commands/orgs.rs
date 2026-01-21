@@ -215,7 +215,7 @@ pub async fn members(
     Ok(())
 }
 
-pub async fn show(slug_or_id: &str, id_only: bool) -> anyhow::Result<()> {
+pub async fn show(slug_or_id: &str, id_only: bool, copy: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
     let orgs = client.list_organizations(100).await?;
 
@@ -223,6 +223,17 @@ pub async fn show(slug_or_id: &str, id_only: bool) -> anyhow::Result<()> {
         .into_iter()
         .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
         .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))?;
+
+    if copy {
+        let mut clipboard = arboard::Clipboard::new()?;
+        clipboard.set_text(&org.id)?;
+        if id_only {
+            println!("{}", org.id);
+        } else {
+            println!("Copied: {}", org.id);
+        }
+        return Ok(());
+    }
 
     if id_only {
         println!("{}", org.id);

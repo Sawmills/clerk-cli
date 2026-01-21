@@ -36,6 +36,10 @@ enum Commands {
         /// Output only the organization ID
         #[arg(long)]
         id_only: bool,
+
+        /// Copy the organization ID to clipboard
+        #[arg(short, long)]
+        copy: bool,
     },
 
     /// Generate a sign-in link to impersonate a user
@@ -370,6 +374,7 @@ async fn main() -> anyhow::Result<()> {
             subcommand,
             org,
             id_only,
+            copy,
         } => match (subcommand, org) {
             (
                 Some(OrgsSubcommand::List {
@@ -508,7 +513,7 @@ async fn main() -> anyhow::Result<()> {
                 );
             }
             (None, Some(org)) => {
-                commands::orgs::show(&org, id_only).await?;
+                commands::orgs::show(&org, id_only, copy).await?;
             }
             (None, None) => {
                 commands::orgs::run(100, None, false).await?;
