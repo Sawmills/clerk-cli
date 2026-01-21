@@ -178,7 +178,7 @@ fn cli_orgs_sso_list_help() {
         .args(["orgs", "test-org", "sso", "list", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("List SSO connections"));
+        .stdout(predicate::str::contains("clerk orgs sso list"));
 }
 
 #[test]
@@ -325,4 +325,34 @@ fn cli_orgs_sso_delete_requires_connection() {
         .args(["orgs", "test-org", "sso", "delete"])
         .assert()
         .failure();
+}
+
+#[test]
+fn cli_sso_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["sso", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("SSO"));
+}
+
+#[test]
+fn cli_sso_list_help() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .args(["sso", "list", "--help"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn cli_sso_missing_api_key() {
+    Command::cargo_bin("clerk")
+        .unwrap()
+        .env_remove("CLERK_API_KEY")
+        .args(["sso", "list"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("CLERK_API_KEY"));
 }

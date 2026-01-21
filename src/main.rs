@@ -54,6 +54,12 @@ enum Commands {
         list: bool,
     },
 
+    /// Manage SSO connections
+    Sso {
+        #[command(subcommand)]
+        subcommand: Option<TopLevelSsoSubcommand>,
+    },
+
     /// Generate shell completions
     Completions {
         /// Shell to generate completions for
@@ -76,7 +82,7 @@ enum Commands {
     #[command(hide = true)]
     CompleteSsoConnections {
         #[arg(long)]
-        org: String,
+        org: Option<String>,
     },
 }
 
@@ -142,8 +148,12 @@ enum OrgsSubcommand {
 }
 
 #[derive(Subcommand)]
+pub enum TopLevelSsoSubcommand {
+    List,
+}
+
+#[derive(Subcommand)]
 pub enum SsoSubcommand {
-    /// List SSO connections
     List,
     /// Add a SAML connection
     Add {
@@ -528,8 +538,13 @@ async fn main() -> anyhow::Result<()> {
             commands::completions::complete_jwt_templates().await?;
         }
         Commands::CompleteSsoConnections { org } => {
-            commands::orgs::complete_sso_connections(&org).await?;
+            commands::orgs::complete_sso_connections(org.as_deref()).await?;
         }
+        Commands::Sso { subcommand } => match subcommand {
+            Some(TopLevelSsoSubcommand::List) | None => {
+                commands::orgs::list_all_sso().await?;
+            }
+        },
     }
 
     Ok(())

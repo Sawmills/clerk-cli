@@ -378,6 +378,55 @@ pub async fn list_sso(org_slug: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub async fn list_all_sso() -> anyhow::Result<()> {
+    let client = ClerkClient::new()?;
+
+    let connections = client.list_saml_connections(None).await?;
+
+    if connections.is_empty() {
+        println!("No SSO connections found.");
+        return Ok(());
+    }
+
+    let orgs = client.list_organizations(100).await?;
+    let org_map: std::collections::HashMap<_, _> =
+        orgs.into_iter().map(|o| (o.id.clone(), o)).collect();
+
+    let mut table = Table::new();
+    table.load_preset(UTF8_FULL);
+    table.set_header(vec![
+        "ID",
+        "Name",
+        "Organization",
+        "Provider",
+        "Domain",
+        "Active",
+    ]);
+
+    for conn in &connections {
+        let active = if conn.active { "Yes" } else { "No" };
+        let org_name = conn
+            .organization_id
+            .as_ref()
+            .and_then(|id| org_map.get(id))
+            .map(|o| o.slug.as_deref().unwrap_or(&o.name))
+            .unwrap_or("-");
+        table.add_row(vec![
+            conn.id.as_str(),
+            conn.name.as_str(),
+            org_name,
+            conn.provider.as_str(),
+            conn.domain.as_str(),
+            active,
+        ]);
+    }
+
+    println!("{table}");
+    println!("Showing {} SSO connection(s).", connections.len());
+
+    Ok(())
+}
+
 pub async fn update_sso(
     org_slug: &str,
     name_or_id: &str,
@@ -471,19 +520,23 @@ pub async fn delete_sso(org_slug: &str, name_or_id: &str, force: bool) -> anyhow
     Ok(())
 }
 
-pub async fn complete_sso_connections(org_slug: &str) -> anyhow::Result<()> {
+pub async fn complete_sso_connections(org_slug: Option<&str>) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = match orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-    {
-        Some(o) => o,
-        None => return Ok(()),
+    let org_id = if let Some(slug) = org_slug {
+        let orgs = client.list_organizations(100).await?;
+        match orgs
+            .into_iter()
+            .find(|o| o.slug.as_deref() == Some(slug) || o.id == slug)
+        {
+            Some(o) => Some(o.id),
+            None => return Ok(()),
+        }
+    } else {
+        None
     };
 
-    let connections = client.list_saml_connections(Some(&org.id)).await?;
+    let connections = client.list_saml_connections(org_id.as_deref()).await?;
 
     for conn in connections {
         println!("{}:{} ({})", conn.name, conn.domain, conn.provider);

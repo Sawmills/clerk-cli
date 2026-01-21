@@ -337,6 +337,17 @@ _clerk() {
                     ':SHELL:(bash elvish fish powershell zsh)' \
                     && ret=0
                 ;;
+            (sso)
+                local sso_cmd="${words[2]}"
+                if (( CURRENT == 2 )); then
+                    _clerk_top_sso_subcommands && ret=0
+                elif [[ "$sso_cmd" == "list" ]]; then
+                    _arguments "${_arguments_options[@]}" : \
+                        '-h[Print help]' \
+                        '--help[Print help]' \
+                        && ret=0
+                fi
+                ;;
         esac
         ;;
     esac
@@ -349,6 +360,7 @@ _clerk_commands() {
     commands=(
         'users:Manage users'
         'orgs:Manage organizations'
+        'sso:Manage SSO connections'
         'impersonate:Generate a sign-in link to impersonate a user'
         'jwt:Generate a JWT for API testing'
         'completions:Generate shell completions'
@@ -406,6 +418,14 @@ _clerk_sso_subcommands() {
         'add:Add a SAML connection'
         'update:Update a SAML connection'
         'delete:Delete a SAML connection'
+    )
+    _describe -t commands 'subcommand' commands
+}
+
+_clerk_top_sso_subcommands() {
+    local commands
+    commands=(
+        'list:List all SSO connections'
     )
     _describe -t commands 'subcommand' commands
 }

@@ -62,7 +62,9 @@ clerk orgs <org> delete --force          # Delete (skip confirmation)
 ### SSO Connections
 
 ```bash
-clerk orgs <org> sso list                # List SSO connections
+clerk sso                                # List all SSO connections
+clerk sso list                           # Same as above
+clerk orgs <org> sso list                # List SSO for specific org
 clerk orgs <org> sso add \               # Add SAML connection
   --name "Okta" \
   --provider saml_okta \
@@ -108,6 +110,7 @@ clerk completions zsh > ~/.cache/zsh/completions/_clerk
 ```
 
 Add to `~/.zshrc`:
+
 ```bash
 fpath=(~/.cache/zsh/completions $fpath)
 autoload -Uz compinit && compinit
@@ -176,10 +179,10 @@ clerk orgs acme sso update "Okta" \
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `CLERK_API_KEY` | Yes | Clerk secret key (`sk_test_...` or `sk_live_...`) |
-| `CLERK_FRONTEND_API` | No | Frontend API URL for impersonation on custom domains |
+| Variable             | Required | Description                                          |
+| -------------------- | -------- | ---------------------------------------------------- |
+| `CLERK_API_KEY`      | Yes      | Clerk secret key (`sk_test_...` or `sk_live_...`)    |
+| `CLERK_FRONTEND_API` | No       | Frontend API URL for impersonation on custom domains |
 
 ## License
 
