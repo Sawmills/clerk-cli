@@ -136,7 +136,7 @@ class ClerkAPI {
 
   **Commit**: YES - `feat(raycast): add search organizations command`
 
-- [ ] 4. Implement Search Users command
+- [x] 4. Implement Search Users command
 
   **What to do**:
   - Create `src/search-users.tsx`
@@ -145,8 +145,8 @@ class ClerkAPI {
   - Actions: Copy ID, Impersonate, Generate JWT
 
   **Acceptance Criteria**:
-  - [ ] Users searchable by email/name
-  - [ ] Actions navigate to appropriate commands
+  - [x] Users searchable by email/name
+  - [x] Actions navigate to appropriate commands
 
   **Commit**: YES - `feat(raycast): add search users command`
 
