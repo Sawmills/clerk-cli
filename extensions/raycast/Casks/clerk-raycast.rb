@@ -1,6 +1,6 @@
 cask "clerk-raycast" do
   version "0.1.0"
-  sha256 "REPLACE_WITH_ACTUAL_SHA256"
+  sha256 "71b6b06f84905037b9cce67d59c87bd9f016591613736e4e6351e3421aec3c68"
 
   url "https://github.com/Sawmills/clerk-cli/releases/download/raycast-v#{version}/clerk-raycast-#{version}.tar.gz"
   name "Clerk Admin for Raycast"
