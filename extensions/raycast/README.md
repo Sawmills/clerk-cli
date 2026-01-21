@@ -37,6 +37,16 @@ Manage your Clerk users and organizations directly from Raycast. Quick access to
 
 ### Installation
 
+#### Option 1: Homebrew (Recommended)
+
+```bash
+brew install --cask sawmills/tap/clerk-raycast
+```
+
+This automatically installs the extension to Raycast. Just open Raycast and search for "Clerk Admin" to get started.
+
+#### Option 2: Manual Installation
+
 1. Clone or download this extension
 2. Navigate to the extension directory:
    ```bash
@@ -50,10 +60,22 @@ Manage your Clerk users and organizations directly from Raycast. Quick access to
    ```bash
    npm run build
    ```
-5. Import into Raycast:
+5. Install to Raycast:
    ```bash
-   npm run dev
+   ./scripts/install.sh
    ```
+
+#### Option 3: Development Mode
+
+For development and testing:
+
+```bash
+cd extensions/raycast
+npm install
+npm run dev
+```
+
+This opens the extension in Raycast's development mode with hot reload.
 
 ### Configuration
 
