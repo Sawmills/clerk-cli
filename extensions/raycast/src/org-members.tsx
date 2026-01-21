@@ -1,8 +1,7 @@
-import { List, ActionPanel, Action, showToast, Toast } from "@raycast/api";
+import { List, ActionPanel, Action, showToast, Toast, open } from "@raycast/api";
 import { useState, useEffect } from "react";
 import { getClerkClient, Organization, Membership, getMemberDisplayName } from "./api/clerk";
 import React from "react";
-import ImpersonateUser from "./impersonate-user";
 import GenerateJWT from "./generate-jwt";
 
 export default function OrgMembers({ orgId }: { orgId?: string }) {
@@ -56,6 +55,29 @@ export default function OrgMembers({ orgId }: { orgId?: string }) {
       });
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function impersonateUser(userId: string) {
+    try {
+      showToast({ style: Toast.Style.Animated, title: "Generating sign-in link..." });
+
+      const client = getClerkClient();
+      const token = await client.createSignInToken(userId);
+
+      await open(token.url);
+
+      await showToast({
+        style: Toast.Style.Success,
+        title: "✅ Browser Opened!",
+        message: "User impersonation link opened in your browser",
+      });
+    } catch (error) {
+      showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to impersonate user",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   }
 
@@ -114,15 +136,15 @@ export default function OrgMembers({ orgId }: { orgId?: string }) {
               accessories={[{ text: member.role }]}
               actions={
                 <ActionPanel>
-                  <Action.CopyToClipboard content={member.public_user_data.user_id} title="Copy User ID" />
-                  <Action.Push
+                  <Action
                     title="Impersonate User"
-                    target={<ImpersonateUser userId={member.public_user_data.user_id} />}
+                    onAction={() => impersonateUser(member.public_user_data.user_id)}
                   />
                   <Action.Push
                     title="Generate JWT"
                     target={<GenerateJWT userId={member.public_user_data.user_id} />}
                   />
+                  <Action.CopyToClipboard content={member.public_user_data.user_id} title="Copy User ID" />
                 </ActionPanel>
               }
             />

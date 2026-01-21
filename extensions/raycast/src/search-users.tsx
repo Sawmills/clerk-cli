@@ -1,8 +1,7 @@
-import { List, ActionPanel, Action, showToast, Toast } from "@raycast/api";
+import { List, ActionPanel, Action, showToast, Toast, open } from "@raycast/api";
 import { useState, useEffect } from "react";
 import { getClerkClient, User, getUserDisplayName, getUserPrimaryEmail } from "./api/clerk";
 import React from "react";
-import ImpersonateUser from "./impersonate-user";
 import GenerateJWT from "./generate-jwt";
 
 export default function SearchUsers() {
@@ -38,6 +37,29 @@ export default function SearchUsers() {
     }
   }
 
+  async function impersonateUser(userId: string) {
+    try {
+      showToast({ style: Toast.Style.Animated, title: "Generating sign-in link..." });
+
+      const client = getClerkClient();
+      const token = await client.createSignInToken(userId);
+
+      await open(token.url);
+
+      await showToast({
+        style: Toast.Style.Success,
+        title: "✅ Browser Opened!",
+        message: "User impersonation link opened in your browser",
+      });
+    } catch (error) {
+      showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to impersonate user",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
   return (
     <List
       isLoading={isLoading}
@@ -62,9 +84,9 @@ export default function SearchUsers() {
             accessories={[{ text: user.id }]}
             actions={
               <ActionPanel>
-                <Action.CopyToClipboard content={user.id} title="Copy User ID" />
-                <Action.Push title="Impersonate User" target={<ImpersonateUser userId={user.id} />} />
+                <Action title="Impersonate User" onAction={() => impersonateUser(user.id)} />
                 <Action.Push title="Generate JWT" target={<GenerateJWT userId={user.id} />} />
+                <Action.CopyToClipboard content={user.id} title="Copy User ID" />
               </ActionPanel>
             }
           />
