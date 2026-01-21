@@ -1,0 +1,87 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "clerk-admin",
+  "title": "Clerk Admin",
+  "description": "Manage Clerk organizations and users directly from Raycast.",
+  "icon": "icon.png",
+  "author": "Amir Jakoby",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "search-organizations",
+      "title": "Search Organizations",
+      "subtitle": "Clerk Admin",
+      "description": "Search and manage Clerk organizations",
+      "mode": "view"
+    },
+    {
+      "name": "search-users",
+      "title": "Search Users",
+      "subtitle": "Clerk Admin",
+      "description": "Search and manage Clerk users",
+      "mode": "view"
+    },
+    {
+      "name": "impersonate-user",
+      "title": "Impersonate User",
+      "subtitle": "Clerk Admin",
+      "description": "Generate a sign-in link for a user",
+      "mode": "view"
+    },
+    {
+      "name": "generate-jwt",
+      "title": "Generate JWT",
+      "subtitle": "Clerk Admin",
+      "description": "Generate a JWT token for a user",
+      "mode": "view"
+    },
+    {
+      "name": "org-members",
+      "title": "Organization Members",
+      "subtitle": "Clerk Admin",
+      "description": "List and manage organization members",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "type": "password",
+      "name": "clerkApiKey",
+      "title": "Clerk API Key",
+      "description": "Your Clerk secret key (sk_test_... or sk_live_...)",
+      "required": true
+    },
+    {
+      "type": "textfield",
+      "name": "clerkFrontendApi",
+      "title": "Clerk Frontend API",
+      "description": "Optional: Frontend API URL for impersonation on custom domains",
+      "required": false
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "latest",
+    "@raycast/utils": "^1.4.7",
+    "email-validator": "^2.0.4",
+    "nanoid": "^4.0.0",
+    "node-fetch": "^3.2.10"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.6",
+    "@types/node": "18.18.4",
+    "@types/react": "^18.0.38",
+    "eslint": "^8.51.0",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "publish": "ray publish"
+  }
+}

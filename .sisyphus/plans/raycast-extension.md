@@ -116,7 +116,7 @@ class ClerkAPI {
 
   **Commit**: YES - `feat(raycast): add Clerk API client`
 
-- [ ] 3. Implement Search Organizations command
+- [x] 3. Implement Search Organizations command
 
   **What to do**:
   - Create `src/search-organizations.tsx`
@@ -129,10 +129,10 @@ class ClerkAPI {
   - `ActionPanel` with `Action.CopyToClipboard`, `Action.Push`
 
   **Acceptance Criteria**:
-  - [ ] Organizations load on command open
-  - [ ] Search filters results in real-time
-  - [ ] Copy ID action works
-  - [ ] Navigate to members works
+  - [x] Organizations load on command open
+  - [x] Search filters results in real-time
+  - [x] Copy ID action works
+  - [x] Navigate to members works
 
   **Commit**: YES - `feat(raycast): add search organizations command`
 
