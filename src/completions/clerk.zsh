@@ -303,6 +303,9 @@ _clerk() {
                                 ;;
                             (*)
                                 _arguments "${_arguments_options[@]}" : \
+                                    '--id-only[Output only the organization ID]' \
+                                    '-c[Copy the organization ID to clipboard]' \
+                                    '--copy[Copy the organization ID to clipboard]' \
                                     '-h[Print help]' \
                                     '--help[Print help]' \
                                     '1::ORG or COMMAND:_clerk_orgs_and_subcommands' \
