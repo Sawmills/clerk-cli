@@ -32,6 +32,10 @@ enum Commands {
 
         /// Organization slug or ID
         org: Option<String>,
+
+        /// Output only the organization ID
+        #[arg(long)]
+        id_only: bool,
     },
 
     /// Generate a sign-in link to impersonate a user
@@ -362,7 +366,11 @@ async fn main() -> anyhow::Result<()> {
                 commands::users::list(10, None).await?;
             }
         },
-        Commands::Orgs { subcommand, org } => match (subcommand, org) {
+        Commands::Orgs {
+            subcommand,
+            org,
+            id_only,
+        } => match (subcommand, org) {
             (
                 Some(OrgsSubcommand::List {
                     limit,
@@ -500,7 +508,7 @@ async fn main() -> anyhow::Result<()> {
                 );
             }
             (None, Some(org)) => {
-                commands::orgs::show(&org).await?;
+                commands::orgs::show(&org, id_only).await?;
             }
             (None, None) => {
                 commands::orgs::run(100, None, false).await?;
