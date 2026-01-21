@@ -165,7 +165,7 @@ class ClerkAPI {
 
   **Commit**: YES - `feat(raycast): add impersonate command`
 
-- [ ] 6. Implement Generate JWT command
+- [x] 6. Implement Generate JWT command
 
   **What to do**:
   - Create `src/generate-jwt.tsx`
@@ -176,9 +176,9 @@ class ClerkAPI {
   **Note**: Check if Clerk API exposes JWT template listing
 
   **Acceptance Criteria**:
-  - [ ] Template selection works
-  - [ ] JWT copied to clipboard
-  - [ ] Success toast shown
+  - [x] Template selection works
+  - [x] JWT copied to clipboard
+  - [x] Success toast shown
 
   **Commit**: YES - `feat(raycast): add generate JWT command`
 
