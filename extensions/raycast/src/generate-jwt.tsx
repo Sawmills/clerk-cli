@@ -73,10 +73,10 @@ export default function GenerateJWT({ userId }: { userId?: string }) {
 
       await Clipboard.copy(result.token);
 
-      showToast({
+      await showToast({
         style: Toast.Style.Success,
-        title: "JWT copied to clipboard",
-        message: `Token for template "${templateName}" copied`,
+        title: "✅ JWT Copied!",
+        message: `Token for "${templateName}" is in your clipboard. Paste it anywhere.`,
       });
     } catch (error) {
       showToast({
@@ -115,6 +115,7 @@ export default function GenerateJWT({ userId }: { userId?: string }) {
                     title="Select User"
                     onAction={() => {
                       setSelectedUserId(user.id);
+                      setSearchText(""); // Clear search text when moving to template selection
                       setStep("template");
                     }}
                   />
