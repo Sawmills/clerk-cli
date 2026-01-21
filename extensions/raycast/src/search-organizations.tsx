@@ -2,6 +2,7 @@ import { List, ActionPanel, Action, showToast, Toast } from "@raycast/api";
 import { useState, useEffect } from "react";
 import { getClerkClient, Organization } from "./api/clerk";
 import React from "react";
+import OrgMembers from "./org-members";
 
 export default function SearchOrganizations() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -74,10 +75,4 @@ function OrgDetails({ organization }: { organization: Organization }) {
   );
 }
 
-function OrgMembers({ orgId }: { orgId: string }) {
-  return (
-    <List>
-      <List.Item title={`Members for ${orgId}`} subtitle="Coming soon" />
-    </List>
-  );
-}
+

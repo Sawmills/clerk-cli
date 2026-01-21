@@ -182,7 +182,7 @@ class ClerkAPI {
 
   **Commit**: YES - `feat(raycast): add generate JWT command`
 
-- [ ] 7. Implement List Org Members command
+- [x] 7. Implement List Org Members command
 
   **What to do**:
   - Create `src/org-members.tsx`
@@ -191,8 +191,8 @@ class ClerkAPI {
   - Actions: Impersonate, Generate JWT, Copy User ID
 
   **Acceptance Criteria**:
-  - [ ] Members load for selected org
-  - [ ] Actions work correctly
+  - [x] Members load for selected org
+  - [x] Actions work correctly
 
   **Commit**: YES - `feat(raycast): add org members command`
 

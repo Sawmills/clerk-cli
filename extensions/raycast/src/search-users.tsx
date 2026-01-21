@@ -2,6 +2,8 @@ import { List, ActionPanel, Action, showToast, Toast } from "@raycast/api";
 import { useState, useEffect } from "react";
 import { getClerkClient, User, getUserDisplayName, getUserPrimaryEmail } from "./api/clerk";
 import React from "react";
+import ImpersonateUser from "./impersonate-user";
+import GenerateJWT from "./generate-jwt";
 
 export default function SearchUsers() {
   const [users, setUsers] = useState<User[]>([]);
@@ -72,18 +74,4 @@ export default function SearchUsers() {
   );
 }
 
-function ImpersonateUser({ userId }: { userId: string }) {
-  return (
-    <List>
-      <List.Item title={`Impersonate ${userId}`} subtitle="Coming soon" />
-    </List>
-  );
-}
 
-function GenerateJWT({ userId }: { userId: string }) {
-  return (
-    <List>
-      <List.Item title={`Generate JWT for ${userId}`} subtitle="Coming soon" />
-    </List>
-  );
-}
