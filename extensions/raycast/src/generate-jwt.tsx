@@ -131,7 +131,24 @@ export default function GenerateJWT({ userId }: { userId?: string }) {
     return (
       <List isLoading={isLoading} searchBarPlaceholder="Select JWT template...">
         {templates.length === 0 && !isLoading && (
-          <List.EmptyView title="No JWT templates found" description="Create templates in Clerk Dashboard" />
+          <List.EmptyView
+            title="No JWT templates found"
+            description="Create JWT templates in your Clerk Dashboard first. Go to: Dashboard → JWT Templates"
+            actions={
+              <ActionPanel>
+                <Action
+                  title="Go Back to User Selection"
+                  onAction={() => {
+                    setStep("user");
+                    setSelectedUserId(undefined);
+                  }}
+                />
+              </ActionPanel>
+            }
+          />
+        )}
+        {templates.length === 0 && isLoading && (
+          <List.EmptyView title="Loading templates..." description="Please wait..." />
         )}
         {templates.map((template) => (
           <List.Item
@@ -141,6 +158,14 @@ export default function GenerateJWT({ userId }: { userId?: string }) {
             actions={
               <ActionPanel>
                 <Action title="Generate JWT" onAction={() => generateJWT(selectedUserId, template.name)} />
+                <Action
+                  title="Go Back to User Selection"
+                  shortcut={{ modifiers: ["cmd"], key: "b" }}
+                  onAction={() => {
+                    setStep("user");
+                    setSelectedUserId(undefined);
+                  }}
+                />
               </ActionPanel>
             }
           />
@@ -149,5 +174,9 @@ export default function GenerateJWT({ userId }: { userId?: string }) {
     );
   }
 
-  return null;
+  return (
+    <List>
+      <List.EmptyView title="Loading..." description="Initializing JWT generation" />
+    </List>
+  );
 }
