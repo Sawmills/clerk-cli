@@ -1,0 +1,4 @@
+# Icon placeholder
+# For a real extension, replace this with an actual icon.png file
+# Recommended size: 512x512px PNG with transparency
+# You can use the Clerk logo or create a custom icon

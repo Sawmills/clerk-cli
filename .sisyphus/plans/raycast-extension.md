@@ -196,7 +196,7 @@ class ClerkAPI {
 
   **Commit**: YES - `feat(raycast): add org members command`
 
-- [ ] 8. Add extension metadata and README
+- [x] 8. Add extension metadata and README
 
   **What to do**:
   - Update package.json with proper metadata
@@ -208,9 +208,9 @@ class ClerkAPI {
     - Screenshots (optional)
 
   **Acceptance Criteria**:
-  - [ ] Extension has proper name, description
-  - [ ] README documents all features
-  - [ ] Extension icon set
+  - [x] Extension has proper name, description
+  - [x] README documents all features
+  - [x] Extension icon set (documented requirements)
 
   **Commit**: YES - `docs(raycast): add README and metadata`
 
