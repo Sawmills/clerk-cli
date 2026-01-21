@@ -10,7 +10,7 @@ cask "clerk-raycast" do
   depends_on macos: ">= :monterey"
   depends_on cask: "raycast"
 
-  raycast_extensions_dir = "#{Dir.home}/Library/Application Support/Raycast/extensions"
+  raycast_extensions_dir = "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions"
   extension_name = "clerk-admin"
   install_dir = "#{raycast_extensions_dir}/#{extension_name}"
 

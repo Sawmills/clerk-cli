@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-RAYCAST_EXTENSIONS_DIR="$HOME/Library/Application Support/Raycast/extensions"
+RAYCAST_EXTENSIONS_DIR="$HOME/Library/Application Support/com.raycast.macos/extensions"
 EXTENSION_NAME="clerk-admin"
 
 if [ ! -d "$RAYCAST_EXTENSIONS_DIR" ]; then
