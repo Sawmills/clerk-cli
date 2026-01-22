@@ -16,6 +16,14 @@
         {"type": "test", "section": "Tests", "hidden": true},
         {"type": "ci", "section": "CI", "hidden": true}
       ]
+    },
+    "extensions/raycast": {
+      "release-type": "node",
+      "package-name": "clerk-admin",
+      "path": "extensions/raycast",
+      "include-component-in-tag": false,
+      "tag-prefix": "raycast-v",
+      "changelog-path": "extensions/raycast/CHANGELOG.md"
     }
   }
 }
