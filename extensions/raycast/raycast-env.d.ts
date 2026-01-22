@@ -10,8 +10,8 @@
 type ExtensionPreferences = {
   /** Clerk API Key - Your Clerk secret key (sk_test_... or sk_live_...) */
   "clerkApiKey": string,
-  /** Clerk Frontend API - Optional: Frontend API URL for impersonation on custom domains */
-  "clerkFrontendApi"?: string
+  /** Clerk Frontend API - Frontend API URL (required for org-scoped JWTs and impersonation) */
+  "clerkFrontendApi": string
 }
 
 /** Preferences accessible in all the extension's commands */

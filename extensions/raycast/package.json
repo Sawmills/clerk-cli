@@ -66,8 +66,8 @@
       "type": "textfield",
       "name": "clerkFrontendApi",
       "title": "Clerk Frontend API",
-      "description": "Optional: Frontend API URL for impersonation on custom domains",
-      "required": false
+      "description": "Frontend API URL (required for org-scoped JWTs and impersonation)",
+      "required": true
     }
   ],
   "dependencies": {
