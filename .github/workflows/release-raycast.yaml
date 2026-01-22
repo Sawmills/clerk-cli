@@ -2,8 +2,15 @@ name: release-raycast
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "raycast-v*"
+    paths:
+      - "extensions/raycast/**"
+      - ".github/workflows/release-raycast.yaml"
+      - ".release-please-manifest.json"
+      - "release-please-config.json"
   workflow_dispatch:
     inputs:
       version:
@@ -32,26 +39,17 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "tag=raycast-v${{ inputs.version }}" >> $GITHUB_OUTPUT
-          else
+          elif [[ "${GITHUB_REF}" == refs/tags/raycast-v* ]]; then
             tag="${GITHUB_REF#refs/tags/}"
             version="${tag#raycast-v}"
             echo "version=${version}" >> $GITHUB_OUTPUT
             echo "tag=${tag}" >> $GITHUB_OUTPUT
+          else
+            version=$(node -p "require('./extensions/raycast/package.json').version")
+            tag="raycast-v${version}"
+            echo "version=${version}" >> $GITHUB_OUTPUT
+            echo "tag=${tag}" >> $GITHUB_OUTPUT
           fi
-
-      - name: Build and package
-        working-directory: extensions/raycast
-        run: |
-          npm ci
-          npm run build
-          ./scripts/package.sh ${{ steps.version.outputs.version }}
-
-      - name: Calculate SHA256
-        id: sha
-        working-directory: extensions/raycast
-        run: |
-          sha=$(shasum -a 256 clerk-raycast-${{ steps.version.outputs.version }}.tar.gz | cut -d' ' -f1)
-          echo "sha256=${sha}" >> $GITHUB_OUTPUT
 
       - id: create_token
         name: Create token
@@ -60,7 +58,36 @@ jobs:
           app_id: ${{ vars.SAWMILLS_REPO_APP_ID }}
           private_key: ${{ secrets.SAWMILLS_APP_PRIVATE_KEY }}
 
+      - name: Check existing release
+        id: check_release
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if gh release view "${tag}" > /dev/null 2>&1; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and package
+        if: steps.check_release.outputs.skip != 'true'
+        working-directory: extensions/raycast
+        run: |
+          npm ci
+          npm run build
+          ./scripts/package.sh ${{ steps.version.outputs.version }}
+
+      - name: Calculate SHA256
+        id: sha
+        if: steps.check_release.outputs.skip != 'true'
+        working-directory: extensions/raycast
+        run: |
+          sha=$(shasum -a 256 clerk-raycast-${{ steps.version.outputs.version }}.tar.gz | cut -d' ' -f1)
+          echo "sha256=${sha}" >> $GITHUB_OUTPUT
+
       - name: Create release
+        if: steps.check_release.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
         working-directory: extensions/raycast
@@ -80,6 +107,7 @@ jobs:
           fi
 
       - name: Update Homebrew tap
+        if: steps.check_release.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
         run: |
