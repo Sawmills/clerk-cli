@@ -57,6 +57,10 @@ enum Commands {
         #[arg(short, long)]
         template: Option<String>,
 
+        /// Organization ID to scope the JWT to
+        #[arg(long = "org-id")]
+        org_id: Option<String>,
+
         /// List available templates
         #[arg(long)]
         list: bool,
@@ -344,7 +348,7 @@ async fn main() -> anyhow::Result<()> {
                 commands::impersonate::run(Some(user)).await?;
             }
             (Some(UsersSubcommand::Jwt { template }), Some(user)) => {
-                commands::jwt::run(Some(user), template).await?;
+                commands::jwt::run(Some(user), template, None).await?;
             }
             (Some(UsersSubcommand::AddToOrg { org, role }), Some(user)) => {
                 commands::users::add_to_org(&user, &org, &role).await?;
@@ -525,12 +529,13 @@ async fn main() -> anyhow::Result<()> {
         Commands::Jwt {
             user_id,
             template,
+            org_id,
             list,
         } => {
             if list {
                 commands::jwt::run_list_templates().await?;
             } else {
-                commands::jwt::run(user_id, template).await?;
+                commands::jwt::run(user_id, template, org_id).await?;
             }
         }
         Commands::Completions { shell } => {

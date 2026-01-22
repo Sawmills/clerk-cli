@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct User {
     pub id: String,
     pub first_name: Option<String>,
@@ -12,7 +12,7 @@ pub struct User {
     pub created_at: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct EmailAddress {
     pub id: String,
     pub email_address: String,
@@ -34,6 +34,8 @@ pub struct SignInToken {
     pub id: String,
     pub url: String,
     pub status: String,
+    #[serde(default)]
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

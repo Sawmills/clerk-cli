@@ -169,7 +169,7 @@ pub async fn members(
             impersonate::run(Some(uid)).await?;
         }
         (Some(uid), Some(MemberAction::Jwt(template))) => {
-            jwt::run(Some(uid), template).await?;
+            jwt::run(Some(uid), template, Some(org.id.clone())).await?;
         }
         (_, Some(MemberAction::Add { user_id, role })) => {
             let request = CreateOrgMembershipRequest {

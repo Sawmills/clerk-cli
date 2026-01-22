@@ -2,11 +2,15 @@ use crate::client::ClerkClient;
 use anyhow::Result;
 use dialoguer::FuzzySelect;
 
-pub async fn run(user_id: Option<String>, template: Option<String>) -> Result<()> {
+pub async fn run(
+    user_id: Option<String>,
+    template: Option<String>,
+    org_id: Option<String>,
+) -> Result<()> {
     let client = ClerkClient::new()?;
 
-    let user_id = match user_id {
-        Some(id) => id,
+    let user = match user_id {
+        Some(id) => client.get_user(&id).await?,
         None => select_user(&client).await?,
     };
 
@@ -30,7 +34,18 @@ pub async fn run(user_id: Option<String>, template: Option<String>) -> Result<()
         None => select_template(&templates)?,
     };
 
-    let session_id = get_or_create_session(&client, &user_id).await?;
+    if let Some(org) = org_id {
+        let email = user
+            .primary_email()
+            .ok_or_else(|| anyhow::anyhow!("User has no email address"))?;
+        let token = client
+            .create_session_token_with_org(&user.id, &org, &template_name, email)
+            .await?;
+        println!("{}", token.jwt);
+        return Ok(());
+    }
+
+    let session_id = get_or_create_session(&client, &user.id).await?;
     let token = client
         .create_session_token(&session_id, &template_name)
         .await?;
@@ -40,7 +55,7 @@ pub async fn run(user_id: Option<String>, template: Option<String>) -> Result<()
     Ok(())
 }
 
-async fn select_user(client: &ClerkClient) -> Result<String> {
+async fn select_user(client: &ClerkClient) -> Result<crate::models::User> {
     let users = client.list_users(50, None).await?;
     if users.is_empty() {
         anyhow::bail!("No users found");
@@ -65,7 +80,7 @@ async fn select_user(client: &ClerkClient) -> Result<String> {
         .default(0)
         .interact()?;
 
-    Ok(users[selection].id.clone())
+    Ok(users[selection].clone())
 }
 
 fn select_template(templates: &[crate::models::JwtTemplate]) -> Result<String> {

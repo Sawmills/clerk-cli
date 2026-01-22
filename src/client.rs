@@ -5,6 +5,7 @@ use crate::models::{
     SessionToken, SignInToken, UpdateSamlConnectionRequest, User,
 };
 use reqwest::Client;
+use serde_json::Value;
 use thiserror::Error;
 
 const BASE_URL: &str = "https://api.clerk.com/v1";
@@ -22,6 +23,7 @@ pub enum ClerkClientError {
 pub struct ClerkClient {
     client: Client,
     api_key: String,
+    frontend_api: String,
 }
 
 impl ClerkClient {
@@ -32,6 +34,8 @@ impl ClerkClient {
         Ok(Self {
             client: Client::new(),
             api_key,
+            frontend_api: std::env::var("CLERK_FRONTEND_API")
+                .unwrap_or_else(|_| "https://clerk.sawmills.ai".to_string()),
         })
     }
 
@@ -211,14 +215,230 @@ impl ClerkClient {
         Ok(resp.json().await?)
     }
 
+    pub async fn create_session_token_with_org(
+        &self,
+        user_id: &str,
+        org_id: &str,
+        template_name: &str,
+        user_email: &str,
+    ) -> Result<SessionToken, ClerkClientError> {
+        let sign_in_token = self.create_sign_in_token(user_id, 300).await?;
+        let ticket = self.extract_ticket(&sign_in_token)?;
+
+        let (sign_in_id, auth_header) = self.start_sign_in_attempt(user_email).await?;
+        let (session_id, auth_header) = self
+            .complete_ticket_first_factor(&sign_in_id, &auth_header, &ticket)
+            .await?;
+
+        self.touch_session(&session_id, org_id, &auth_header)
+            .await?;
+        let jwt = self
+            .mint_session_token(&session_id, org_id, template_name, &auth_header)
+            .await?;
+
+        Ok(SessionToken { jwt })
+    }
+
+    fn extract_ticket(&self, token: &SignInToken) -> Result<String, ClerkClientError> {
+        if let Some(t) = &token.token {
+            return Ok(t.clone());
+        }
+
+        token
+            .url
+            .split("__clerk_ticket=")
+            .nth(1)
+            .map(|s| s.to_string())
+            .ok_or_else(|| {
+                ClerkClientError::Api("Failed to extract ticket from sign-in token".to_string())
+            })
+    }
+
+    async fn start_sign_in_attempt(
+        &self,
+        email: &str,
+    ) -> Result<(String, String), ClerkClientError> {
+        let body = format!("identifier={}", urlencoding::encode(email));
+        let resp = self
+            .client
+            .post(format!("{}/v1/client/sign_ins", self.frontend_api))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(ClerkClientError::Api(format!(
+                "Sign-in start failed ({}): {}",
+                status, text
+            )));
+        }
+
+        let auth_header = resp
+            .headers()
+            .get("authorization")
+            .or_else(|| resp.headers().get("Authorization"))
+            .and_then(|h| h.to_str().ok())
+            .map(|h| h.to_string())
+            .ok_or_else(|| {
+                ClerkClientError::Api("Authorization header missing from sign-in start".to_string())
+            })?;
+
+        let data: Value = resp.json().await.unwrap_or_else(|_| Value::Null);
+        let sign_in_id = data
+            .get("response")
+            .and_then(|r| r.get("id"))
+            .and_then(|v| v.as_str())
+            .or_else(|| data.get("id").and_then(|v| v.as_str()))
+            .ok_or_else(|| {
+                ClerkClientError::Api("Sign-in start did not return an id".to_string())
+            })?;
+
+        Ok((sign_in_id.to_string(), ensure_bearer(auth_header)))
+    }
+
+    async fn complete_ticket_first_factor(
+        &self,
+        sign_in_id: &str,
+        auth_header: &str,
+        ticket: &str,
+    ) -> Result<(String, String), ClerkClientError> {
+        let body = format!("strategy=ticket&ticket={}", urlencoding::encode(ticket));
+        let resp = self
+            .client
+            .post(format!(
+                "{}/v1/client/sign_ins/{}/attempt_first_factor",
+                self.frontend_api, sign_in_id
+            ))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Authorization", auth_header)
+            .body(body)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(ClerkClientError::Api(format!(
+                "Ticket factor failed ({}): {}",
+                status, text
+            )));
+        }
+
+        let next_auth = resp
+            .headers()
+            .get("authorization")
+            .or_else(|| resp.headers().get("Authorization"))
+            .and_then(|h| h.to_str().ok())
+            .map(|h| h.to_string())
+            .ok_or_else(|| {
+                ClerkClientError::Api(
+                    "Authorization header missing from ticket factor response".to_string(),
+                )
+            })?;
+
+        let data: Value = resp.json().await.unwrap_or_else(|_| Value::Null);
+        let session_id = data
+            .get("response")
+            .and_then(|r| r.get("created_session_id"))
+            .and_then(|v| v.as_str())
+            .or_else(|| data.get("created_session_id").and_then(|v| v.as_str()))
+            .ok_or_else(|| {
+                ClerkClientError::Api(format!(
+                    "Ticket flow did not yield a session id (status: {:?})",
+                    data.get("response").and_then(|r| r.get("status"))
+                ))
+            })?;
+
+        Ok((session_id.to_string(), ensure_bearer(next_auth)))
+    }
+
+    async fn touch_session(
+        &self,
+        session_id: &str,
+        org_id: &str,
+        auth_header: &str,
+    ) -> Result<(), ClerkClientError> {
+        let body = format!("active_organization_id={}", urlencoding::encode(org_id));
+        let resp = self
+            .client
+            .post(format!(
+                "{}/v1/client/sessions/{}/touch",
+                self.frontend_api, session_id
+            ))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Authorization", auth_header)
+            .body(body)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(ClerkClientError::Api(format!(
+                "Session touch failed ({}): {}",
+                status, text
+            )));
+        }
+
+        Ok(())
+    }
+
+    async fn mint_session_token(
+        &self,
+        session_id: &str,
+        org_id: &str,
+        template_name: &str,
+        auth_header: &str,
+    ) -> Result<String, ClerkClientError> {
+        let body = format!("organization_id={}", urlencoding::encode(org_id));
+        let mut path = format!(
+            "{}/v1/client/sessions/{}/tokens",
+            self.frontend_api, session_id
+        );
+        if !template_name.is_empty() {
+            path.push('/');
+            path.push_str(template_name);
+        }
+
+        let resp = self
+            .client
+            .post(path)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Authorization", auth_header)
+            .body(body)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(ClerkClientError::Api(format!(
+                "Session token mint failed ({}): {}",
+                status, text
+            )));
+        }
+
+        let data: Value = resp.json().await.unwrap_or_else(|_| Value::Null);
+        let token = data
+            .get("jwt")
+            .and_then(|v| v.as_str())
+            .or_else(|| data.get("token").and_then(|v| v.as_str()))
+            .ok_or_else(|| ClerkClientError::Api("Empty JWT returned".to_string()))?;
+
+        Ok(token.to_string())
+    }
+
     pub async fn exchange_ticket_for_session(
         &self,
         ticket: &str,
     ) -> Result<String, ClerkClientError> {
-        let frontend_url = std::env::var("CLERK_FRONTEND_API")
-            .unwrap_or_else(|_| "https://clerk.sawmills.ai".to_string());
-
-        let url = format!("{}/v1/client/sign_ins?_clerk_js_version=5", frontend_url);
+        let url = format!(
+            "{}/v1/client/sign_ins?_clerk_js_version=5",
+            self.frontend_api
+        );
 
         let resp = self
             .client
@@ -538,6 +758,14 @@ impl ClerkClient {
         }
 
         Ok(())
+    }
+}
+
+fn ensure_bearer(header: String) -> String {
+    if header.starts_with("Bearer ") {
+        header
+    } else {
+        format!("Bearer {}", header)
     }
 }
 

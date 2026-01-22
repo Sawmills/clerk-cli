@@ -1,0 +1,156 @@
+name: release-raycast
+
+on:
+  push:
+    tags:
+      - "raycast-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=raycast-v${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            tag="${GITHUB_REF#refs/tags/}"
+            version="${tag#raycast-v}"
+            echo "version=${version}" >> $GITHUB_OUTPUT
+            echo "tag=${tag}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and package
+        working-directory: extensions/raycast
+        run: |
+          npm ci
+          npm run build
+          ./scripts/package.sh ${{ steps.version.outputs.version }}
+
+      - name: Calculate SHA256
+        id: sha
+        working-directory: extensions/raycast
+        run: |
+          sha=$(shasum -a 256 clerk-raycast-${{ steps.version.outputs.version }}.tar.gz | cut -d' ' -f1)
+          echo "sha256=${sha}" >> $GITHUB_OUTPUT
+
+      - id: create_token
+        name: Create token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ vars.SAWMILLS_REPO_APP_ID }}
+          private_key: ${{ secrets.SAWMILLS_APP_PRIVATE_KEY }}
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}
+        working-directory: extensions/raycast
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          version="${{ steps.version.outputs.version }}"
+          
+          if gh release view "${tag}" > /dev/null 2>&1; then
+            echo "Release ${tag} exists, uploading assets..."
+            gh release upload "${tag}" clerk-raycast-${version}.tar.gz --clobber
+          else
+            echo "Creating new release ${tag}..."
+            gh release create "${tag}" \
+              --title "Raycast Extension v${version}" \
+              --notes "Clerk Admin for Raycast v${version}" \
+              clerk-raycast-${version}.tar.gz
+          fi
+
+      - name: Update Homebrew tap
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          
+          version="${{ steps.version.outputs.version }}"
+          sha256="${{ steps.sha.outputs.sha256 }}"
+          
+          workdir=$(mktemp -d)
+          trap 'rm -rf "${workdir}"' EXIT
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-tap.git" "${workdir}/tap"
+          cd "${workdir}/tap"
+          
+          mkdir -p Casks
+          cat > Casks/clerk-raycast.rb << EOF
+          cask "clerk-raycast" do
+            version "${version}"
+            sha256 "${sha256}"
+
+            url "https://github.com/Sawmills/clerk-cli/releases/download/raycast-v#{version}/clerk-raycast-#{version}.tar.gz"
+            name "Clerk Admin for Raycast"
+            desc "Manage Clerk users and organizations from Raycast"
+            homepage "https://github.com/Sawmills/clerk-cli"
+
+            depends_on macos: ">= :monterey"
+            depends_on cask: "raycast"
+
+            postflight do
+              raycast_extensions_dir = "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions"
+              extension_name = "clerk-admin"
+              install_dir = "#{raycast_extensions_dir}/#{extension_name}"
+              pkg_dir = "#{staged_path}/clerk-raycast-#{version}"
+
+              system_command "/bin/mkdir", args: ["-p", raycast_extensions_dir]
+              system_command "/bin/rm", args: ["-rf", install_dir]
+              system_command "/bin/cp", args: ["-r", pkg_dir, install_dir]
+
+              puts ""
+              puts "✅ Clerk Admin extension installed to Raycast!"
+              puts ""
+              puts "To use:"
+              puts "  1. Restart Raycast or press ⌘ R to reload"
+              puts "  2. Open Raycast (⌘ Space)"
+              puts "  3. Search for 'Clerk Admin'"
+              puts "  4. Configure your API key in preferences (⌘ ,)"
+              puts ""
+              puts "Available commands:"
+              puts "  - Search Organizations"
+              puts "  - Search Users"
+              puts "  - Impersonate User"
+              puts "  - Generate JWT"
+              puts "  - Organization Members"
+              puts "  - Switch Instance"
+            end
+
+            uninstall delete: "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions/clerk-admin"
+
+            zap trash: "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions/clerk-admin"
+          end
+          EOF
+          
+          sed -i 's/^          //' Casks/clerk-raycast.rb
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/clerk-raycast.rb
+          
+          if git diff --cached --quiet; then
+            echo "No changes to cask."
+            exit 0
+          fi
+          
+          git commit -m "feat(clerk-raycast): update to v${version}"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-tap.git" HEAD:main

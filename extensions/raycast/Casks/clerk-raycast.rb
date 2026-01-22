@@ -1,6 +1,6 @@
 cask "clerk-raycast" do
-  version "0.1.0"
-  sha256 "71b6b06f84905037b9cce67d59c87bd9f016591613736e4e6351e3421aec3c68"
+  version "0.2.1"
+  sha256 "e317da890938517349004636dd8cfd17c67689c285793e1a2bba1cd9117373af"
 
   url "https://github.com/Sawmills/clerk-cli/releases/download/raycast-v#{version}/clerk-raycast-#{version}.tar.gz"
   name "Clerk Admin for Raycast"
@@ -10,35 +10,15 @@ cask "clerk-raycast" do
   depends_on macos: ">= :monterey"
   depends_on cask: "raycast"
 
-  raycast_extensions_dir = "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions"
-  extension_name = "clerk-admin"
-  install_dir = "#{raycast_extensions_dir}/#{extension_name}"
-
-  preflight do
-    system_command "/bin/mkdir",
-                   args: ["-p", raycast_extensions_dir]
-  end
-
-  pkg_dir = staged_path.join("clerk-raycast-#{version}")
-
   postflight do
-    system_command "/bin/mkdir",
-                   args: ["-p", install_dir]
-    
-    system_command "/bin/cp",
-                   args: ["-r", "#{pkg_dir}/src", install_dir]
-    system_command "/bin/cp",
-                   args: ["-r", "#{pkg_dir}/assets", install_dir]
-    system_command "/bin/cp",
-                   args: ["#{pkg_dir}/package.json", install_dir]
-    system_command "/bin/cp",
-                   args: ["#{pkg_dir}/tsconfig.json", install_dir]
-    
-    Dir.chdir(install_dir) do
-      system_command "/usr/local/bin/npm",
-                     args: ["install", "--production"],
-                     print_stdout: true
-    end
+    raycast_extensions_dir = "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions"
+    extension_name = "clerk-admin"
+    install_dir = "#{raycast_extensions_dir}/#{extension_name}"
+    pkg_dir = "#{staged_path}/clerk-raycast-#{version}"
+
+    system_command "/bin/mkdir", args: ["-p", raycast_extensions_dir]
+    system_command "/bin/rm", args: ["-rf", install_dir]
+    system_command "/bin/cp", args: ["-r", pkg_dir, install_dir]
 
     puts "\n✅ Clerk Admin extension installed to Raycast!"
     puts "\nTo use:"
@@ -52,9 +32,10 @@ cask "clerk-raycast" do
     puts "  - Impersonate User"
     puts "  - Generate JWT"
     puts "  - Organization Members"
+    puts "  - Switch Instance"
   end
 
-  uninstall delete: install_dir
+  uninstall delete: "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions/clerk-admin"
 
-  zap trash: install_dir
+  zap trash: "#{Dir.home}/Library/Application Support/com.raycast.macos/extensions/clerk-admin"
 end

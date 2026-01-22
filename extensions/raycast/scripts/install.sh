@@ -13,6 +13,7 @@ INSTALL_DIR="$RAYCAST_EXTENSIONS_DIR/$EXTENSION_NAME"
 
 echo "📦 Installing Clerk Admin extension to Raycast..."
 
+rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 
 cp -r src "$INSTALL_DIR/"
@@ -22,6 +23,9 @@ cp tsconfig.json "$INSTALL_DIR/"
 
 cd "$INSTALL_DIR"
 npm install --production
+
+echo ""
+echo "⚠️  If commands don't appear, quit Raycast completely (right-click menu bar → Quit) and reopen."
 
 echo "✅ Clerk Admin extension installed!"
 echo ""
@@ -37,3 +41,4 @@ echo "  - Search Users"
 echo "  - Impersonate User"
 echo "  - Generate JWT"
 echo "  - Organization Members"
+echo "  - Switch Instance"

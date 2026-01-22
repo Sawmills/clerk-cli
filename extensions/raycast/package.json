@@ -44,6 +44,13 @@
       "subtitle": "Clerk Admin",
       "description": "List and manage organization members",
       "mode": "view"
+    },
+    {
+      "name": "switch-instance",
+      "title": "Switch Instance",
+      "subtitle": "Clerk Admin",
+      "description": "Switch between Clerk instances (prod, staging, dev)",
+      "mode": "view"
     }
   ],
   "preferences": [
@@ -63,7 +70,7 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "latest",
+    "@raycast/api": "^1.87.0",
     "@raycast/utils": "^1.4.7",
     "email-validator": "^2.0.4",
     "nanoid": "^4.0.0",
@@ -72,10 +79,10 @@
   "devDependencies": {
     "@raycast/eslint-config": "^1.0.6",
     "@types/node": "18.18.4",
-    "@types/react": "^18.0.38",
+    "@types/react": "19.0.10",
     "eslint": "^8.51.0",
     "prettier": "^3.0.3",
-    "typescript": "^5.2.2"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "build": "ray build -e dist",
