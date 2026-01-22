@@ -30,8 +30,9 @@ function resolveFrontendApi(): string {
     return preferences.clerkFrontendApi;
   }
 
-  // Fallback to the primary frontend API domain if not provided
-  return "https://clerk.sawmills.ai";
+  throw new Error(
+    "Clerk Frontend API is required. Set it in preferences or on the selected instance.",
+  );
 }
 
 // Response type interfaces
