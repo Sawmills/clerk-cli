@@ -176,13 +176,17 @@ export class ClerkAPI {
     return response.data;
   }
 
-  async createSignInToken(userId: string): Promise<SignInToken> {
+  async createSignInToken(userId: string, orgId?: string): Promise<SignInToken> {
+    const body: Record<string, unknown> = {
+      user_id: userId,
+      expires_in_seconds: 3600,
+    };
+    if (orgId) {
+      body.organization_id = orgId;
+    }
     return this.request<SignInToken>("/sign_in_tokens", {
       method: "POST",
-      body: JSON.stringify({
-        user_id: userId,
-        expires_in_seconds: 3600,
-      }),
+      body: JSON.stringify(body),
     });
   }
 

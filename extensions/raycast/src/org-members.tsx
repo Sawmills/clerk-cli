@@ -106,7 +106,7 @@ export default function OrgMembers({ orgId }: { orgId?: string }) {
       showToast({ style: Toast.Style.Animated, title: "Generating sign-in link..." });
 
       const client = getClerkClient();
-      const token = await client.createSignInToken(userId);
+      const token = await client.createSignInToken(userId, selectedOrg?.id);
 
       await open(token.url);
 
