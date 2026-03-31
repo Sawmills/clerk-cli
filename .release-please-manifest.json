@@ -1,5 +1,4 @@
 {
-  ".": "0.18.0"
-  ,
-  "extensions/raycast": "0.2.2"
+  ".": "0.19.0",
+  "extensions/raycast": "0.3.0"
 }
