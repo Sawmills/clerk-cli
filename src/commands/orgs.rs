@@ -2,7 +2,7 @@ use crate::client::ClerkClient;
 use crate::commands::{impersonate, jwt};
 use crate::models::{
     CreateOrgMembershipRequest, CreateOrganizationRequest, CreateSamlConnectionRequest,
-    UpdateSamlConnectionRequest,
+    Organization, UpdateSamlConnectionRequest,
 };
 use comfy_table::{Table, presets::UTF8_FULL};
 use fuzzy_matcher::FuzzyMatcher;
@@ -13,6 +13,17 @@ pub enum MemberAction {
     Impersonate,
     Jwt(Option<String>),
     Add { user_id: String, role: String },
+}
+
+async fn all_organizations(client: &ClerkClient) -> anyhow::Result<Vec<Organization>> {
+    Ok(client.list_organizations(u32::MAX).await?)
+}
+
+pub async fn resolve_organization(
+    client: &ClerkClient,
+    slug_or_id: &str,
+) -> anyhow::Result<Organization> {
+    Ok(client.get_organization(slug_or_id).await?)
 }
 
 pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::Result<()> {
@@ -79,7 +90,7 @@ pub async fn run(limit: u32, fuzzy: Option<String>, ids_only: bool) -> anyhow::R
 
 pub async fn pick() -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
-    let orgs = client.list_organizations(100).await?;
+    let orgs = all_organizations(&client).await?;
 
     if orgs.is_empty() {
         anyhow::bail!("No organizations found.");
@@ -116,7 +127,7 @@ pub async fn pick() -> anyhow::Result<()> {
 }
 
 pub async fn pick_org(client: &ClerkClient) -> anyhow::Result<crate::models::Organization> {
-    let orgs = client.list_organizations(100).await?;
+    let orgs = all_organizations(client).await?;
 
     if orgs.is_empty() {
         anyhow::bail!("No organizations found.");
@@ -158,11 +169,7 @@ pub async fn members(
 ) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     match (user_id, action) {
         (Some(uid), Some(MemberAction::Impersonate)) => {
@@ -217,12 +224,7 @@ pub async fn members(
 
 pub async fn show(slug_or_id: &str, id_only: bool, copy: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
-    let orgs = client.list_organizations(100).await?;
-
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))?;
+    let org = resolve_organization(&client, slug_or_id).await?;
 
     if copy {
         let mut clipboard = arboard::Clipboard::new()?;
@@ -270,12 +272,7 @@ pub async fn create(name: String, slug: Option<String>) -> anyhow::Result<()> {
 
 pub async fn delete(slug_or_id: &str, force: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
-    let orgs = client.list_organizations(100).await?;
-
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))?;
+    let org = resolve_organization(&client, slug_or_id).await?;
 
     if !force {
         println!(
@@ -312,11 +309,7 @@ pub struct CreateSamlArgs {
 pub async fn add_sso(org_slug: &str, args: CreateSamlArgs) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     let request = CreateSamlConnectionRequest {
         name: args.name,
@@ -356,11 +349,7 @@ pub struct UpdateSamlArgs {
 pub async fn list_sso(org_slug: &str) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     let connections = client.list_saml_connections(Some(&org.id)).await?;
 
@@ -404,7 +393,7 @@ pub async fn list_all_sso() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let orgs = client.list_organizations(100).await?;
+    let orgs = all_organizations(&client).await?;
     let org_map: std::collections::HashMap<_, _> =
         orgs.into_iter().map(|o| (o.id.clone(), o)).collect();
 
@@ -450,11 +439,7 @@ pub async fn update_sso(
 ) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     let connections = client.list_saml_connections(Some(&org.id)).await?;
     let conn = connections
@@ -497,11 +482,7 @@ pub async fn update_sso(
 pub async fn delete_sso(org_slug: &str, name_or_id: &str, force: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     let connections = client.list_saml_connections(Some(&org.id)).await?;
     let conn = connections
@@ -540,13 +521,9 @@ pub async fn complete_sso_connections(org_slug: Option<&str>) -> anyhow::Result<
     let client = ClerkClient::new()?;
 
     let org_id = if let Some(slug) = org_slug {
-        let orgs = client.list_organizations(100).await?;
-        match orgs
-            .into_iter()
-            .find(|o| o.slug.as_deref() == Some(slug) || o.id == slug)
-        {
-            Some(o) => Some(o.id),
-            None => return Ok(()),
+        match resolve_organization(&client, slug).await {
+            Ok(o) => Some(o.id),
+            Err(_) => return Ok(()),
         }
     } else {
         None

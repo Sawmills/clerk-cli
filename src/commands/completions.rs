@@ -1,11 +1,12 @@
 use crate::client::ClerkClient;
+use crate::commands::orgs::resolve_organization;
 
 pub async fn complete_orgs() -> anyhow::Result<()> {
     let Ok(client) = ClerkClient::new() else {
         return Ok(());
     };
 
-    let Ok(orgs) = client.list_organizations(100).await else {
+    let Ok(orgs) = client.list_organizations(u32::MAX).await else {
         return Ok(());
     };
 
@@ -54,11 +55,7 @@ pub async fn complete_users(org_slug: Option<String>) -> anyhow::Result<()> {
 
     match org_slug {
         Some(slug) => {
-            let Ok(orgs) = client.list_organizations(100).await else {
-                return Ok(());
-            };
-
-            let Some(org) = orgs.into_iter().find(|o| o.slug.as_deref() == Some(&slug)) else {
+            let Ok(org) = resolve_organization(&client, &slug).await else {
                 return Ok(());
             };
 

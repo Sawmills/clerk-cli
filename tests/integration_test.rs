@@ -1,4 +1,4 @@
-use wiremock::matchers::{bearer_token, method, path};
+use wiremock::matchers::{bearer_token, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 mod common;
@@ -94,6 +94,10 @@ async fn list_organizations_success() {
 
     Mock::given(method("GET"))
         .and(path("/v1/organizations"))
+        .and(query_param("limit", "100"))
+        .and(query_param("offset", "0"))
+        .and(query_param("order_by", "-created_at"))
+        .and(bearer_token("sk_test_mock"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&body))
         .mount(&mock_server)
         .await;
@@ -104,6 +108,194 @@ async fn list_organizations_success() {
     assert_eq!(orgs.len(), 2);
     assert_eq!(orgs[0].name, "Acme Corp");
     assert_eq!(orgs[1].slug, Some("beta".to_string()));
+}
+
+#[tokio::test]
+async fn list_organizations_paginates() {
+    let mock_server = MockServer::start().await;
+
+    let first_page = serde_json::json!({
+        "data": [
+            {
+                "id": "org_123",
+                "name": "Acme Corp",
+                "slug": "acme",
+                "members_count": 5,
+                "created_at": 1699000000000_i64
+            },
+            {
+                "id": "org_456",
+                "name": "Beta Inc",
+                "slug": "beta",
+                "members_count": 10,
+                "created_at": 1698000000000_i64
+            }
+        ],
+        "total_count": 3
+    });
+
+    let second_page = serde_json::json!({
+        "data": [
+            {
+                "id": "org_789",
+                "name": "Gamma LLC",
+                "slug": "gamma",
+                "members_count": 7,
+                "created_at": 1697000000000_i64
+            }
+        ],
+        "total_count": 3
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations"))
+        .and(query_param("limit", "3"))
+        .and(query_param("offset", "0"))
+        .and(query_param("order_by", "-created_at"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&first_page))
+        .mount(&mock_server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations"))
+        .and(query_param("limit", "1"))
+        .and(query_param("offset", "2"))
+        .and(query_param("order_by", "-created_at"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&second_page))
+        .mount(&mock_server)
+        .await;
+
+    let client = common::make_test_client(&mock_server.uri(), "sk_test_mock");
+    let orgs = client.list_organizations(3).await.unwrap();
+
+    assert_eq!(orgs.len(), 3);
+    assert_eq!(orgs[2].name, "Gamma LLC");
+}
+
+#[tokio::test]
+async fn search_organizations_uses_query_and_paginates() {
+    let mock_server = MockServer::start().await;
+
+    let first_page = serde_json::json!({
+        "data": [
+            {
+                "id": "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6",
+                "name": "Ziff Davis | Tech & Shopping",
+                "slug": "ziff-davis-tech-shopping",
+                "members_count": 4,
+                "created_at": 1696000000000_i64
+            },
+            {
+                "id": "org_39UYMpqIhuBzup1j4vEcSVq6Rzs",
+                "name": "Ziff Davis | Gaming",
+                "slug": "ziff-davis-gaming",
+                "members_count": 6,
+                "created_at": 1695000000000_i64
+            }
+        ],
+        "total_count": 3
+    });
+
+    let second_page = serde_json::json!({
+        "data": [
+            {
+                "id": "org_39UYHdoezFdeqZD7x5ZBx672WZY",
+                "name": "Ziff Davis | Spiceworks",
+                "slug": "ziff-davis-spiceworks",
+                "members_count": 8,
+                "created_at": 1694000000000_i64
+            }
+        ],
+        "total_count": 3
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations"))
+        .and(query_param("limit", "3"))
+        .and(query_param("offset", "0"))
+        .and(query_param("query", "Ziff Davis"))
+        .and(query_param("order_by", "-created_at"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&first_page))
+        .mount(&mock_server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations"))
+        .and(query_param("limit", "1"))
+        .and(query_param("offset", "2"))
+        .and(query_param("query", "Ziff Davis"))
+        .and(query_param("order_by", "-created_at"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&second_page))
+        .mount(&mock_server)
+        .await;
+
+    let client = common::make_test_client(&mock_server.uri(), "sk_test_mock");
+    let orgs = client.search_organizations(3, "Ziff Davis").await.unwrap();
+
+    assert_eq!(orgs.len(), 3);
+    assert!(orgs.iter().all(|org| org.name.contains("Ziff Davis")));
+}
+
+#[tokio::test]
+async fn get_organization_uses_direct_lookup() {
+    let mock_server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "id": "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6",
+        "name": "Ziff Davis | Tech & Shopping",
+        "slug": "ziff-davis-tech-shopping",
+        "members_count": 4,
+        "created_at": 1696000000000_i64
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations/org_31CBB0pzZLGKibkIGN2ZSAv2wZ6"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&mock_server)
+        .await;
+
+    let client = common::make_test_client(&mock_server.uri(), "sk_test_mock");
+    let org = client
+        .get_organization("org_31CBB0pzZLGKibkIGN2ZSAv2wZ6")
+        .await
+        .unwrap();
+
+    assert_eq!(org.name, "Ziff Davis | Tech & Shopping");
+    assert_eq!(org.slug, Some("ziff-davis-tech-shopping".to_string()));
+}
+
+#[tokio::test]
+async fn get_organization_uses_direct_lookup_for_slug() {
+    let mock_server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "id": "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6",
+        "name": "Ziff Davis | Tech & Shopping",
+        "slug": "ziff-davis-tech-shopping",
+        "members_count": 4,
+        "created_at": 1696000000000_i64
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations/ziff-davis-tech-shopping"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&mock_server)
+        .await;
+
+    let client = common::make_test_client(&mock_server.uri(), "sk_test_mock");
+    let org = client
+        .get_organization("ziff-davis-tech-shopping")
+        .await
+        .unwrap();
+
+    assert_eq!(org.id, "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6");
+    assert_eq!(org.name, "Ziff Davis | Tech & Shopping");
 }
 
 #[tokio::test]

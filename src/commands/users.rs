@@ -1,4 +1,5 @@
 use crate::client::ClerkClient;
+use crate::commands::orgs::resolve_organization;
 use crate::models::{CreateOrgMembershipRequest, CreateUserRequest};
 use comfy_table::{Table, presets::UTF8_FULL};
 
@@ -89,11 +90,7 @@ pub async fn show(user_id: &str) -> anyhow::Result<()> {
 pub async fn add_to_org(user_id: &str, org_slug: &str, role: &str) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     let request = CreateOrgMembershipRequest {
         user_id: user_id.to_string(),
@@ -112,11 +109,7 @@ pub async fn add_to_org(user_id: &str, org_slug: &str, role: &str) -> anyhow::Re
 pub async fn remove_from_org(user_id: &str, org_slug: &str) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
 
-    let orgs = client.list_organizations(100).await?;
-    let org = orgs
-        .into_iter()
-        .find(|o| o.slug.as_deref() == Some(org_slug) || o.id == org_slug)
-        .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", org_slug))?;
+    let org = resolve_organization(&client, org_slug).await?;
 
     client.delete_org_membership(&org.id, user_id).await?;
     println!("Removed user {} from '{}'", user_id, org.name);
