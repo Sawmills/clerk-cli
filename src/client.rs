@@ -9,6 +9,7 @@ use serde_json::Value;
 use thiserror::Error;
 
 const BASE_URL: &str = "https://api.clerk.com/v1";
+const ORGANIZATIONS_PAGE_SIZE: u32 = 500;
 
 #[derive(Error, Debug)]
 pub enum ClerkClientError {
@@ -73,10 +74,73 @@ impl ClerkClient {
         &self,
         limit: u32,
     ) -> Result<Vec<Organization>, ClerkClientError> {
-        let url = format!(
-            "{}/organizations?limit={}&order_by=-created_at",
-            BASE_URL, limit
+        self.paginate_organizations(limit, None).await
+    }
+
+    pub async fn search_organizations(
+        &self,
+        limit: u32,
+        query: &str,
+    ) -> Result<Vec<Organization>, ClerkClientError> {
+        self.paginate_organizations(limit, Some(query)).await
+    }
+
+    async fn paginate_organizations(
+        &self,
+        limit: u32,
+        query: Option<&str>,
+    ) -> Result<Vec<Organization>, ClerkClientError> {
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
+
+        let mut organizations = Vec::new();
+        let mut offset = 0u32;
+
+        loop {
+            let remaining = limit.saturating_sub(organizations.len() as u32);
+            if remaining == 0 {
+                break;
+            }
+
+            let page_limit = remaining.min(ORGANIZATIONS_PAGE_SIZE);
+            let OrganizationsResponse { data, total_count } = self
+                .fetch_organizations_page(page_limit, offset, query)
+                .await?;
+            let fetched = data.len() as u32;
+            organizations.extend(data);
+
+            if organizations.len() as u32 >= limit {
+                break;
+            }
+
+            let total_count = total_count.unwrap_or(organizations.len() as u32);
+            let has_more = (organizations.len() as u32) < total_count;
+
+            if !has_more || fetched == 0 {
+                break;
+            }
+
+            offset = offset.saturating_add(fetched);
+        }
+
+        Ok(organizations)
+    }
+
+    async fn fetch_organizations_page(
+        &self,
+        limit: u32,
+        offset: u32,
+        query: Option<&str>,
+    ) -> Result<OrganizationsResponse, ClerkClientError> {
+        let mut url = format!(
+            "{}/organizations?limit={}&offset={}&order_by=-created_at",
+            BASE_URL, limit, offset
         );
+
+        if let Some(q) = query {
+            url.push_str(&format!("&query={}", urlencoding::encode(q)));
+        }
 
         let resp = self
             .client
@@ -95,8 +159,7 @@ impl ClerkClient {
             ));
         }
 
-        let wrapper: OrganizationsResponse = resp.json().await?;
-        Ok(wrapper.data)
+        Ok(resp.json().await?)
     }
 
     pub async fn create_sign_in_token(
@@ -772,4 +835,6 @@ fn ensure_bearer(header: String) -> String {
 #[derive(serde::Deserialize)]
 struct OrganizationsResponse {
     data: Vec<Organization>,
+    #[serde(default, rename = "total_count")]
+    total_count: Option<u32>,
 }

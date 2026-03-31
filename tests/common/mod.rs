@@ -15,6 +15,8 @@ pub struct TestClerkClient {
     api_key: String,
 }
 
+const ORGANIZATIONS_PAGE_SIZE: u32 = 500;
+
 #[derive(Debug, serde::Deserialize)]
 pub struct User {
     pub id: String,
@@ -61,6 +63,8 @@ struct ClerkErrorDetail {
 #[derive(Debug, serde::Deserialize)]
 struct OrganizationsResponse {
     data: Vec<Organization>,
+    #[serde(default, rename = "total_count")]
+    total_count: Option<u32>,
 }
 
 impl User {
@@ -125,30 +129,81 @@ impl TestClerkClient {
         &self,
         limit: u32,
     ) -> Result<Vec<Organization>, TestClientError> {
-        let url = format!(
-            "{}/v1/organizations?limit={}&order_by=-created_at",
-            self.base_url, limit
-        );
+        self.paginate_organizations(limit, None).await
+    }
 
-        let resp = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.api_key)
-            .send()
-            .await?;
+    pub async fn search_organizations(
+        &self,
+        limit: u32,
+        query: &str,
+    ) -> Result<Vec<Organization>, TestClientError> {
+        self.paginate_organizations(limit, Some(query)).await
+    }
 
-        if !resp.status().is_success() {
-            let err: ClerkError = resp.json().await?;
-            return Err(TestClientError::Api(
-                err.errors
-                    .first()
-                    .map(|e| e.message.clone())
-                    .unwrap_or_default(),
-            ));
+    async fn paginate_organizations(
+        &self,
+        limit: u32,
+        query: Option<&str>,
+    ) -> Result<Vec<Organization>, TestClientError> {
+        if limit == 0 {
+            return Ok(Vec::new());
         }
 
-        let wrapper: OrganizationsResponse = resp.json().await?;
-        Ok(wrapper.data)
+        let mut organizations = Vec::new();
+        let mut offset = 0u32;
+
+        loop {
+            let remaining = limit.saturating_sub(organizations.len() as u32);
+            if remaining == 0 {
+                break;
+            }
+
+            let page_limit = remaining.min(ORGANIZATIONS_PAGE_SIZE);
+            let mut url = format!(
+                "{}/v1/organizations?limit={}&offset={}&order_by=-created_at",
+                self.base_url, page_limit, offset
+            );
+
+            if let Some(q) = query {
+                url.push_str(&format!("&query={}", urlencoding::encode(q)));
+            }
+
+            let resp = self
+                .client
+                .get(&url)
+                .bearer_auth(&self.api_key)
+                .send()
+                .await?;
+
+            if !resp.status().is_success() {
+                let err: ClerkError = resp.json().await?;
+                return Err(TestClientError::Api(
+                    err.errors
+                        .first()
+                        .map(|e| e.message.clone())
+                        .unwrap_or_default(),
+                ));
+            }
+
+            let OrganizationsResponse { data, total_count } = resp.json().await?;
+            let fetched = data.len() as u32;
+            organizations.extend(data);
+
+            if organizations.len() as u32 >= limit {
+                break;
+            }
+
+            let total_count = total_count.unwrap_or(organizations.len() as u32);
+            let has_more = (organizations.len() as u32) < total_count;
+
+            if !has_more || fetched == 0 {
+                break;
+            }
+
+            offset = offset.saturating_add(fetched);
+        }
+
+        Ok(organizations)
     }
 
     pub async fn create_sign_in_token(
