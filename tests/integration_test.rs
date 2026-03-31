@@ -241,6 +241,64 @@ async fn search_organizations_uses_query_and_paginates() {
 }
 
 #[tokio::test]
+async fn get_organization_uses_direct_lookup() {
+    let mock_server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "id": "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6",
+        "name": "Ziff Davis | Tech & Shopping",
+        "slug": "ziff-davis-tech-shopping",
+        "members_count": 4,
+        "created_at": 1696000000000_i64
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations/org_31CBB0pzZLGKibkIGN2ZSAv2wZ6"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&mock_server)
+        .await;
+
+    let client = common::make_test_client(&mock_server.uri(), "sk_test_mock");
+    let org = client
+        .get_organization("org_31CBB0pzZLGKibkIGN2ZSAv2wZ6")
+        .await
+        .unwrap();
+
+    assert_eq!(org.name, "Ziff Davis | Tech & Shopping");
+    assert_eq!(org.slug, Some("ziff-davis-tech-shopping".to_string()));
+}
+
+#[tokio::test]
+async fn get_organization_uses_direct_lookup_for_slug() {
+    let mock_server = MockServer::start().await;
+
+    let body = serde_json::json!({
+        "id": "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6",
+        "name": "Ziff Davis | Tech & Shopping",
+        "slug": "ziff-davis-tech-shopping",
+        "members_count": 4,
+        "created_at": 1696000000000_i64
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/v1/organizations/ziff-davis-tech-shopping"))
+        .and(bearer_token("sk_test_mock"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&mock_server)
+        .await;
+
+    let client = common::make_test_client(&mock_server.uri(), "sk_test_mock");
+    let org = client
+        .get_organization("ziff-davis-tech-shopping")
+        .await
+        .unwrap();
+
+    assert_eq!(org.id, "org_31CBB0pzZLGKibkIGN2ZSAv2wZ6");
+    assert_eq!(org.name, "Ziff Davis | Tech & Shopping");
+}
+
+#[tokio::test]
 async fn create_sign_in_token_success() {
     let mock_server = MockServer::start().await;
 

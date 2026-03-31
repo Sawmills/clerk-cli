@@ -140,6 +140,36 @@ impl TestClerkClient {
         self.paginate_organizations(limit, Some(query)).await
     }
 
+    pub async fn get_organization(
+        &self,
+        organization_id_or_slug: &str,
+    ) -> Result<Organization, TestClientError> {
+        let url = format!(
+            "{}/v1/organizations/{}",
+            self.base_url,
+            urlencoding::encode(organization_id_or_slug)
+        );
+
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(&self.api_key)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let err: ClerkError = resp.json().await?;
+            return Err(TestClientError::Api(
+                err.errors
+                    .first()
+                    .map(|e| e.message.clone())
+                    .unwrap_or_default(),
+            ));
+        }
+
+        Ok(resp.json().await?)
+    }
+
     async fn paginate_organizations(
         &self,
         limit: u32,
