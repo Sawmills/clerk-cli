@@ -19,14 +19,18 @@ async fn all_organizations(client: &ClerkClient) -> anyhow::Result<Vec<Organizat
     Ok(client.list_organizations(u32::MAX).await?)
 }
 
+fn find_organization(orgs: Vec<Organization>, slug_or_id: &str) -> Option<Organization> {
+    orgs.into_iter()
+        .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
+}
+
 pub async fn resolve_organization(
     client: &ClerkClient,
     slug_or_id: &str,
 ) -> anyhow::Result<Organization> {
-    let orgs = client.search_organizations(u32::MAX, slug_or_id).await?;
+    let orgs = all_organizations(client).await?;
 
-    orgs.into_iter()
-        .find(|o| o.slug.as_deref() == Some(slug_or_id) || o.id == slug_or_id)
+    find_organization(orgs, slug_or_id)
         .ok_or_else(|| anyhow::anyhow!("Organization '{}' not found", slug_or_id))
 }
 
@@ -525,13 +529,9 @@ pub async fn complete_sso_connections(org_slug: Option<&str>) -> anyhow::Result<
     let client = ClerkClient::new()?;
 
     let org_id = if let Some(slug) = org_slug {
-        let orgs = client.search_organizations(u32::MAX, slug).await?;
-        match orgs
-            .into_iter()
-            .find(|o| o.slug.as_deref() == Some(slug) || o.id == slug)
-        {
-            Some(o) => Some(o.id),
-            None => return Ok(()),
+        match resolve_organization(&client, slug).await {
+            Ok(o) => Some(o.id),
+            Err(_) => return Ok(()),
         }
     } else {
         None
@@ -544,4 +544,51 @@ pub async fn complete_sso_connections(org_slug: Option<&str>) -> anyhow::Result<
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_organization;
+    use crate::models::Organization;
+
+    fn org(id: &str, name: &str, slug: Option<&str>) -> Organization {
+        Organization {
+            id: id.to_string(),
+            name: name.to_string(),
+            slug: slug.map(ToString::to_string),
+            members_count: None,
+            created_at: 0,
+        }
+    }
+
+    #[test]
+    fn find_organization_matches_exact_id() {
+        let orgs = vec![
+            org("org_1", "Alpha", Some("alpha")),
+            org("org_2", "Beta", Some("beta")),
+        ];
+
+        let found = find_organization(orgs, "org_2").expect("org id should match");
+
+        assert_eq!(found.name, "Beta");
+    }
+
+    #[test]
+    fn find_organization_matches_exact_slug() {
+        let orgs = vec![
+            org("org_1", "Alpha", Some("alpha")),
+            org("org_2", "Beta", Some("beta")),
+        ];
+
+        let found = find_organization(orgs, "beta").expect("org slug should match");
+
+        assert_eq!(found.id, "org_2");
+    }
+
+    #[test]
+    fn find_organization_returns_none_for_unknown_value() {
+        let orgs = vec![org("org_1", "Alpha", Some("alpha"))];
+
+        assert!(find_organization(orgs, "missing").is_none());
+    }
 }
