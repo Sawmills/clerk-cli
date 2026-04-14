@@ -174,11 +174,35 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Casks/clerk-raycast.rb
-          
+
           if git diff --cached --quiet; then
             echo "No changes to cask."
             exit 0
           fi
-          
+
+          BRANCH="clerk-raycast/v${version}"
+          git checkout -b "$BRANCH"
           git commit -m "feat(clerk-raycast): update to v${version}"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" HEAD:main
+          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
+
+          PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
+            --base main --head "$BRANCH" \
+            --title "feat(clerk-raycast): update to v${version}" \
+            --body "Automated cask update from clerk-cli raycast release v${version}.")
+          PR_NUMBER=${PR_URL##*/}
+
+          CHANGED=$(gh pr view -R Sawmills/homebrew-private-tap "$PR_NUMBER" --json files --jq '[.files[].path] | join(",")')
+          if [ "$CHANGED" != "Casks/clerk-raycast.rb" ]; then
+            echo "PR modifies unexpected files ($CHANGED); leaving open for human review."
+            exit 1
+          fi
+
+          SHA1=$(gh api "repos/Sawmills/homebrew-private-tap/pulls/$PR_NUMBER" --jq '.head.sha')
+          sleep 2
+          SHA2=$(gh api "repos/Sawmills/homebrew-private-tap/pulls/$PR_NUMBER" --jq '.head.sha')
+          if [ "$SHA1" != "$SHA2" ]; then
+            echo "HEAD moved during validation ($SHA1 -> $SHA2); leaving open for human review."
+            exit 1
+          fi
+
+          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --admin
