@@ -169,5 +169,38 @@ jobs:
             exit 0
           fi
 
+          BRANCH="clerk/${tag}"
+          # Fetch existing remote branch so --force-with-lease has a tracking ref on retries.
+          git fetch "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
           git commit -m "feat(clerk): update to ${tag}"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" HEAD:main
+          # Use explicit-lease form: local ref must match remote. Empty expect = no remote branch yet.
+          EXPECT_SHA=$(git rev-parse -q --verify refs/remotes/origin/$BRANCH || true)
+          git push --force-with-lease="$BRANCH:$EXPECT_SHA" "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
+
+          PR_NUMBER=$(gh api "repos/Sawmills/homebrew-private-tap/pulls?state=open&base=main&head=Sawmills:$BRANCH" --jq '.[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
+              --base main --head "$BRANCH" \
+              --title "feat(clerk): update to ${tag}" \
+              --body "Automated formula update from clerk-cli release ${tag}.")
+            PR_NUMBER=${PR_URL##*/}
+          fi
+
+          # Atomic snapshot: read base, files, and head SHA in one call; merge uses that SHA.
+          SNAPSHOT=$(gh pr view "$PR_NUMBER" -R Sawmills/homebrew-private-tap --json baseRefName,isCrossRepository,files,headRefOid)
+          BASE=$(echo "$SNAPSHOT" | jq -r .baseRefName)
+          XREPO=$(echo "$SNAPSHOT" | jq -r .isCrossRepository)
+          CHANGED=$(echo "$SNAPSHOT" | jq -r '[.files[].path] | join(",")')
+          HEAD_SHA=$(echo "$SNAPSHOT" | jq -r .headRefOid)
+
+          if [ "$BASE" != "main" ] || [ "$XREPO" != "false" ]; then
+            echo "PR failed base/cross-repo check (base=$BASE xrepo=$XREPO); leaving open for human review."
+            exit 1
+          fi
+          if [ "$CHANGED" != "Formula/clerk.rb" ]; then
+            echo "PR modifies unexpected files ($CHANGED); leaving open for human review."
+            exit 1
+          fi
+
+          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --match-head-commit "$HEAD_SHA"
