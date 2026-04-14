@@ -187,7 +187,7 @@ jobs:
           git commit -m "feat(clerk-raycast): update to v${version}"
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
 
-          PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --base main --state open --json number,headRepositoryOwner --jq 'map(select(.headRepositoryOwner.login == "Sawmills")) | .[0].number // empty')
           if [ -z "$PR_NUMBER" ]; then
             PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
               --base main --head "$BRANCH" \
