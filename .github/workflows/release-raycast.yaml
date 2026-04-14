@@ -181,11 +181,13 @@ jobs:
           fi
 
           BRANCH="clerk-raycast/v${version}"
+          # Fetch existing remote branch so --force-with-lease has a tracking ref on retries.
+          git fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
           git commit -m "feat(clerk-raycast): update to v${version}"
-          git push --force-with-lease "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
+          git push --force-with-lease origin "$BRANCH"
 
-          PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
           if [ -z "$PR_NUMBER" ]; then
             PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
               --base main --head "$BRANCH" \
@@ -194,11 +196,20 @@ jobs:
             PR_NUMBER=${PR_URL##*/}
           fi
 
-          CHANGED=$(gh pr view -R Sawmills/homebrew-private-tap "$PR_NUMBER" --json files --jq '[.files[].path] | join(",")')
+          # Atomic snapshot: read base, files, and head SHA in one call; merge uses that SHA.
+          SNAPSHOT=$(gh pr view "$PR_NUMBER" -R Sawmills/homebrew-private-tap --json baseRefName,isCrossRepository,files,headRefOid)
+          BASE=$(echo "$SNAPSHOT" | jq -r .baseRefName)
+          XREPO=$(echo "$SNAPSHOT" | jq -r .isCrossRepository)
+          CHANGED=$(echo "$SNAPSHOT" | jq -r '[.files[].path] | join(",")')
+          HEAD_SHA=$(echo "$SNAPSHOT" | jq -r .headRefOid)
+
+          if [ "$BASE" != "main" ] || [ "$XREPO" != "false" ]; then
+            echo "PR failed base/cross-repo check (base=$BASE xrepo=$XREPO); leaving open for human review."
+            exit 1
+          fi
           if [ "$CHANGED" != "Casks/clerk-raycast.rb" ]; then
             echo "PR modifies unexpected files ($CHANGED); leaving open for human review."
             exit 1
           fi
 
-          HEAD_SHA=$(gh api "repos/Sawmills/homebrew-private-tap/pulls/$PR_NUMBER" --jq '.head.sha')
-          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --admin --match-head-commit "$HEAD_SHA"
+          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --match-head-commit "$HEAD_SHA"
