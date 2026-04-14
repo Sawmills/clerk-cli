@@ -185,7 +185,9 @@ jobs:
           git fetch "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
           git commit -m "feat(clerk-raycast): update to v${version}"
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
+          # Use explicit-lease form: local ref must match remote. Empty expect = no remote branch yet.
+          EXPECT_SHA=$(git rev-parse -q --verify refs/remotes/origin/$BRANCH || true)
+          git push --force-with-lease="$BRANCH:$EXPECT_SHA" "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
 
           PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --base main --state open --json number,headRepositoryOwner --jq 'map(select(.headRepositoryOwner.login == "Sawmills")) | .[0].number // empty')
           if [ -z "$PR_NUMBER" ]; then
