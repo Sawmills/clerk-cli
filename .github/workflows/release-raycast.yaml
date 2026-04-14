@@ -118,7 +118,7 @@ jobs:
           
           workdir=$(mktemp -d)
           trap 'rm -rf "${workdir}"' EXIT
-          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-tap.git" "${workdir}/tap"
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "${workdir}/tap"
           cd "${workdir}/tap"
           
           mkdir -p Casks
@@ -181,4 +181,4 @@ jobs:
           fi
           
           git commit -m "feat(clerk-raycast): update to v${version}"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-tap.git" HEAD:main
+          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" HEAD:main
