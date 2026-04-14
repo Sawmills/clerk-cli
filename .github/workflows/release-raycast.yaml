@@ -189,7 +189,7 @@ jobs:
           EXPECT_SHA=$(git rev-parse -q --verify refs/remotes/origin/$BRANCH || true)
           git push --force-with-lease="$BRANCH:$EXPECT_SHA" "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
 
-          PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --base main --state open --json number,headRepositoryOwner --jq 'map(select(.headRepositoryOwner.login == "Sawmills")) | .[0].number // empty')
+          PR_NUMBER=$(gh api "repos/Sawmills/homebrew-private-tap/pulls?state=open&base=main&head=Sawmills:$BRANCH" --jq '.[0].number // empty')
           if [ -z "$PR_NUMBER" ]; then
             PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
               --base main --head "$BRANCH" \
