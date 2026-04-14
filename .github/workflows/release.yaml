@@ -172,13 +172,16 @@ jobs:
           BRANCH="clerk/${tag}"
           git checkout -b "$BRANCH"
           git commit -m "feat(clerk): update to ${tag}"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
+          git push --force-with-lease "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
 
-          PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
-            --base main --head "$BRANCH" \
-            --title "feat(clerk): update to ${tag}" \
-            --body "Automated formula update from clerk-cli release ${tag}.")
-          PR_NUMBER=${PR_URL##*/}
+          PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
+              --base main --head "$BRANCH" \
+              --title "feat(clerk): update to ${tag}" \
+              --body "Automated formula update from clerk-cli release ${tag}.")
+            PR_NUMBER=${PR_URL##*/}
+          fi
 
           CHANGED=$(gh pr view -R Sawmills/homebrew-private-tap "$PR_NUMBER" --json files --jq '[.files[].path] | join(",")')
           if [ "$CHANGED" != "Formula/clerk.rb" ]; then
@@ -186,12 +189,5 @@ jobs:
             exit 1
           fi
 
-          SHA1=$(gh api "repos/Sawmills/homebrew-private-tap/pulls/$PR_NUMBER" --jq '.head.sha')
-          sleep 2
-          SHA2=$(gh api "repos/Sawmills/homebrew-private-tap/pulls/$PR_NUMBER" --jq '.head.sha')
-          if [ "$SHA1" != "$SHA2" ]; then
-            echo "HEAD moved during validation ($SHA1 -> $SHA2); leaving open for human review."
-            exit 1
-          fi
-
-          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --admin
+          HEAD_SHA=$(gh api "repos/Sawmills/homebrew-private-tap/pulls/$PR_NUMBER" --jq '.head.sha')
+          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --admin --match-head-commit "$HEAD_SHA"
