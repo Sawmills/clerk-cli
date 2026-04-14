@@ -5,7 +5,7 @@ This guide explains how to make the Clerk Raycast extension installable via Home
 ## Quick Install (Once Published)
 
 ```bash
-brew install --cask sawmills/tap/clerk-raycast
+brew install --cask sawmills/private-tap/clerk-raycast
 ```
 
 ## Publishing Process
@@ -49,8 +49,8 @@ Update `Casks/clerk-raycast.rb`:
 
 ```bash
 # Clone your tap repository
-git clone git@github.com:Sawmills/homebrew-tap.git
-cd homebrew-tap
+git clone git@github.com:Sawmills/homebrew-private-tap.git
+cd homebrew-private-tap
 
 # Copy the cask formula
 cp /path/to/clerk-cli/extensions/raycast/Casks/clerk-raycast.rb Casks/
@@ -68,7 +68,7 @@ git push origin main
 brew uninstall --cask clerk-raycast
 
 # Install from tap
-brew install --cask sawmills/tap/clerk-raycast
+brew install --cask sawmills/private-tap/clerk-raycast
 
 # Verify
 ls -la ~/Library/Application\ Support/Raycast/extensions/clerk-admin
@@ -93,7 +93,7 @@ npm run build
 2. Build and package: `./scripts/package.sh 0.2.0`
 3. Create new GitHub release
 4. Update cask formula with new version and SHA256
-5. Push to homebrew-tap
+5. Push to homebrew-private-tap
 
 ### For Users
 
@@ -155,12 +155,12 @@ extensions/raycast/
 - ✅ Consistent with CLI tool distribution
 - ✅ Easy uninstallation
 - ✅ Version management
-- ✅ Works with existing sawmills/tap
+- ✅ Works with existing sawmills/private-tap
 
 ## Next Steps
 
 1. Test the package script: `./scripts/package.sh 0.1.0`
 2. Create a test release on GitHub
 3. Update the cask formula with real SHA256
-4. Add to sawmills/homebrew-tap
-5. Test installation: `brew install --cask sawmills/tap/clerk-raycast`
+4. Add to sawmills/homebrew-private-tap
+5. Test installation: `brew install --cask sawmills/private-tap/clerk-raycast`
