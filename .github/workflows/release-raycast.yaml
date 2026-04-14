@@ -182,10 +182,10 @@ jobs:
 
           BRANCH="clerk-raycast/v${version}"
           # Fetch existing remote branch so --force-with-lease has a tracking ref on retries.
-          git fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
+          git fetch "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
           git commit -m "feat(clerk-raycast): update to v${version}"
-          git push --force-with-lease origin "$BRANCH"
+          git push --force-with-lease "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
 
           PR_NUMBER=$(gh pr list -R Sawmills/homebrew-private-tap --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
           if [ -z "$PR_NUMBER" ]; then
