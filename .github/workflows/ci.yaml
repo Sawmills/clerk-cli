@@ -27,7 +27,8 @@ jobs:
 
   trunk:
     name: Trunk Code Quality
-    runs-on: ubuntu-latest
+    # trunk-ignore(actionlint/runner-label): Namespace profile
+    runs-on: namespace-profile-sawmills-runner-large
     timeout-minutes: 15
     concurrency:
       group: ${{ github.head_ref || github.ref }}-trunk
@@ -36,11 +37,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Trunk and Rust artifacts
+        # yamllint disable-line rule:line-length
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0
+        with:
+          cache: rust
+          path: |
+            /home/runner/.cache/trunk
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Trunk Check
         uses: trunk-io/trunk-action@v1
+        with:
+          cache: false
 
   conventional_commits:
     name: Conventional Commits
