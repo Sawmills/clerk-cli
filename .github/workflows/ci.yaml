@@ -32,7 +32,7 @@ jobs:
     name: Trunk Code Quality
     # trunk-ignore(actionlint/runner-label): Namespace profile
     runs-on: namespace-profile-sawmills-runner-large
-    timeout-minutes: 15
+    timeout-minutes: 20
     concurrency:
       group: ${{ github.event_name == 'pull_request' && github.ref || github.sha }}-trunk
       cancel-in-progress: true
