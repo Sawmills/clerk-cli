@@ -32,7 +32,8 @@ jobs:
             target: aarch64-apple-darwin
             artifact: clerk
 
-    runs-on: ${{ matrix.os }}
+    # trunk-ignore(actionlint/runner-label): Existing Namespace profile
+    runs-on: ${{ fromJSON('{"ubuntu-latest":"namespace-profile-sawmills-runner"}')[matrix.os] || matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,7 +69,8 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    # trunk-ignore(actionlint/runner-label): Existing Namespace profile
+    runs-on: namespace-profile-sawmills-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
