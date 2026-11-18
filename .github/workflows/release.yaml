@@ -1,206 +1,79 @@
-name: release
-
-on:
-  push:
-    tags:
-      - "v*"
+name: A752 B SDK-free Darwin canary
+'on':
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Git ref to release (e.g. v1.0.0)"
+      proof_id:
+        type: choice
         required: true
-        type: string
-
+        options:
+        - flt810-a752-pbcopy-001
 permissions:
-  contents: write
-
+  contents: read
+concurrency:
+  group: a752-b-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact: clerk
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact: clerk
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: clerk
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact: clerk
-
-    runs-on: ${{ matrix.os }}
+  darwin:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'Sawmills/clerk-cli' && github.ref == 'refs/heads/flt810-a752-darwin-20261118' && github.workflow_ref
+      == 'Sawmills/clerk-cli/.github/workflows/release.yaml@refs/heads/flt810-a752-darwin-20261118' && inputs.proof_id == 'flt810-a752-pbcopy-001' && github.run_attempt
+      == 1 && vars.FLT596_CANARY_ADMISSION == format('a752-b-{0}', github.sha) }}
+    runs-on: runs-on=${{ github.run_id }}/cpu=4/ram=8/family=c8a.xlarge/image=ubuntu24-full-x64/spot=false/retry=false/ssh=false
+    timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross-compilation tools
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-
-      - name: Package
-        run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ../../../clerk-${{ matrix.target }}.tar.gz ${{ matrix.artifact }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: clerk-${{ matrix.target }}
-          path: clerk-${{ matrix.target }}.tar.gz
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - id: create_token
-        name: Create token
-        uses: tibdex/github-app-token@v2
-        with:
-          app_id: ${{ vars.SAWMILLS_REPO_APP_ID }}
-          private_key: ${{ secrets.SAWMILLS_APP_PRIVATE_KEY }}
-
-      - name: Create or update release
-        env:
-          GH_TOKEN: ${{ steps.create_token.outputs.token }}
-        run: |
-          ref="${{ inputs.ref || github.ref }}"
-          tag="${ref#refs/tags/}"
-          tag="${tag#refs/}"
-
-          # Check if release exists
-          if gh release view "${tag}" > /dev/null 2>&1; then
-            echo "Release ${tag} exists, uploading assets..."
-            gh release upload "${tag}" artifacts/*.tar.gz --clobber
-          else
-            echo "Creating new release ${tag}..."
-            gh release create "${tag}" \
-              --title "${tag}" \
-              --generate-notes \
-              artifacts/*.tar.gz
-          fi
-
-      - name: Update Homebrew tap
-        env:
-          GH_TOKEN: ${{ steps.create_token.outputs.token }}
-        run: |
-          set -euo pipefail
-
-          ref="${{ inputs.ref || github.ref }}"
-          tag="${ref#refs/tags/}"
-          tag="${tag#refs/}"
-
-          if [[ "${tag}" != v* ]]; then
-            echo "Not a v* tag (${tag}); skipping tap update."
-            exit 0
-          fi
-
-          version="${tag#v}"
-          revision=$(git rev-parse HEAD)
-
-          workdir=$(mktemp -d)
-          trap 'rm -rf "${workdir}"' EXIT
-          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "${workdir}/tap"
-          cd "${workdir}/tap"
-
-          mkdir -p Formula
-          cat > Formula/clerk.rb << 'FORMULA'
-          class Clerk < Formula
-            desc "Unofficial Clerk CLI for admin tasks"
-            homepage "https://github.com/Sawmills/clerk-cli"
-            url "https://github.com/Sawmills/clerk-cli.git",
-                using:    :git,
-                tag:      "TAG_PLACEHOLDER",
-                revision: "REV_PLACEHOLDER"
-            version "VER_PLACEHOLDER"
-
-            depends_on "rust" => :build
-
-            def install
-              system "cargo", "build", "--release"
-              bin.install "target/release/clerk"
-            end
-
-            test do
-              assert_match "Unofficial Clerk CLI", shell_output("#{bin}/clerk --help")
-            end
-          end
-          FORMULA
-
-          sed -i "s/TAG_PLACEHOLDER/${tag}/g" Formula/clerk.rb
-          sed -i "s/REV_PLACEHOLDER/${revision}/g" Formula/clerk.rb
-          sed -i "s/VER_PLACEHOLDER/${version}/g" Formula/clerk.rb
-          sed -i 's/^          //' Formula/clerk.rb
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/clerk.rb
-
-          if git diff --cached --quiet; then
-            echo "No changes to formula."
-            exit 0
-          fi
-
-          BRANCH="clerk/${tag}"
-          # Fetch existing remote branch so --force-with-lease has a tracking ref on retries.
-          git fetch "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" 2>/dev/null || true
-          git checkout -b "$BRANCH"
-          git commit -m "feat(clerk): update to ${tag}"
-          # Use explicit-lease form: local ref must match remote. Empty expect = no remote branch yet.
-          EXPECT_SHA=$(git rev-parse -q --verify refs/remotes/origin/$BRANCH || true)
-          git push --force-with-lease="$BRANCH:$EXPECT_SHA" "https://x-access-token:${GH_TOKEN}@github.com/Sawmills/homebrew-private-tap.git" "$BRANCH"
-
-          PR_NUMBER=$(gh api "repos/Sawmills/homebrew-private-tap/pulls?state=open&base=main&head=Sawmills:$BRANCH" --jq '.[0].number // empty')
-          if [ -z "$PR_NUMBER" ]; then
-            PR_URL=$(gh pr create -R Sawmills/homebrew-private-tap \
-              --base main --head "$BRANCH" \
-              --title "feat(clerk): update to ${tag}" \
-              --body "Automated formula update from clerk-cli release ${tag}.")
-            PR_NUMBER=${PR_URL##*/}
-          fi
-
-          # Atomic snapshot: read base, files, and head SHA in one call; merge uses that SHA.
-          SNAPSHOT=$(gh pr view "$PR_NUMBER" -R Sawmills/homebrew-private-tap --json baseRefName,isCrossRepository,files,headRefOid)
-          BASE=$(echo "$SNAPSHOT" | jq -r .baseRefName)
-          XREPO=$(echo "$SNAPSHOT" | jq -r .isCrossRepository)
-          CHANGED=$(echo "$SNAPSHOT" | jq -r '[.files[].path] | join(",")')
-          HEAD_SHA=$(echo "$SNAPSHOT" | jq -r .headRefOid)
-
-          if [ "$BASE" != "main" ] || [ "$XREPO" != "false" ]; then
-            echo "PR failed base/cross-repo check (base=$BASE xrepo=$XREPO); leaving open for human review."
-            exit 1
-          fi
-          if [ "$CHANGED" != "Formula/clerk.rb" ]; then
-            echo "PR modifies unexpected files ($CHANGED); leaving open for human review."
-            exit 1
-          fi
-
-          gh pr merge "$PR_NUMBER" -R Sawmills/homebrew-private-tap --squash --delete-branch --match-head-commit "$HEAD_SHA"
+    - name: Checkout exact admitted canary source
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ github.sha }}
+        fetch-depth: 2
+        persist-credentials: false
+    - name: Acquire frozen OSS tools and build both Darwin targets
+      id: build
+      shell: bash
+      run: "set -euo pipefail\ndirectory=\"$RUNNER_TEMP/a752-b-$GITHUB_RUN_ID\"\nmkdir -m 700 \"$directory\"\nprintf '%s' \"$GITHUB_RUN_ID\" > \"$directory/owned\"\
+        \nexport A752_B_DIRECTORY=\"$directory\"\npython3 - <<'PY'\nimport hashlib, json, os, pathlib, platform, subprocess\nassert platform.machine() == 'x86_64'\n\
+        assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == os.environ['GITHUB_SHA']\nexpected = {'Cargo.toml': '40021fc89eafbebf16feca96f25047b18bc0113df13e1bab276e27a81842c744',\
+        \ 'Cargo.lock': '19cb90788328768baf5944d81bad2e51f26dfc2c3f8edcac3833ba2069e9ab0e', 'src/commands/orgs.rs': '83b3e3aa6901edc9d11bf11f7ff17a814da94cf688300284bee643f1be2c01bb'}\n\
+        for name, digest in expected.items():\n    assert hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() == digest, name\nassert not os.environ.get('SDKROOT'),\
+        \ 'inherited SDKROOT is forbidden'\nfor parent in ['/opt', '/usr/local', '/Library/Developer/CommandLineTools/SDKs']:\n    p = pathlib.Path(parent)\n    assert\
+        \ not list(p.glob('MacOSX*.sdk')), 'inherited macOS SDK is forbidden'\nprint('A752_B_SOURCE ' + json.dumps({'workflow_sha': os.environ['GITHUB_SHA'],\n  \
+        \    'payload_files': expected, 'machine': platform.machine(), 'SDKROOT_present': False,\n      'scope': 'SDK-free cross-build only; no Mac runtime'}, sort_keys=True))\n\
+        PY\nunset SDKROOT CFLAGS CXXFLAGS LDFLAGS BINDGEN_EXTRA_CLANG_ARGS CC CXX AR RANLIB\nexport CARGO_HOME=\"$directory/cargo\"\nexport RUSTUP_HOME=\"$directory/rustup\"\
+        \nexport CARGO_TARGET_DIR=\"$directory/target\"\nexport CARGO_ZIGBUILD_CACHE_DIR=\"$directory/zig-cache\"\nexport ZIG_GLOBAL_CACHE_DIR=\"$directory/zig-global\"\
+        \nexport ZIG_LOCAL_CACHE_DIR=\"$directory/zig-local\"\nexport CARGO_BUILD_JOBS=2\nexport PYTHONPATH=\"$directory/zig-package\"\nmkdir -p \"$directory/bin\"\
+        \ncurl --fail --silent --show-error --location --retry 0 --max-time 180 \\\n  'https://github.com/rust-cross/cargo-zigbuild/releases/download/v0.24.1/cargo-zigbuild-x86_64-unknown-linux-gnu.tar.xz'\
+        \ \\\n  --output \"$directory/cargo-zigbuild.tar.xz\"\nprintf '%s  %s\\n' '32581c8e13f27a807bb244aaaac870522f5b51263c766cf77b1a99771ce9fa5c' \"$directory/cargo-zigbuild.tar.xz\"\
+        \ | sha256sum --check --status\npython3 - <<'PY'\nimport os, pathlib, tarfile\np = pathlib.Path(os.environ['A752_B_DIRECTORY'])\nwith tarfile.open(p / 'cargo-zigbuild.tar.xz',\
+        \ 'r:xz') as archive:\n    members = [m for m in archive.getmembers() if m.isfile() and pathlib.PurePosixPath(m.name).name == 'cargo-zigbuild']\n    assert\
+        \ len(members) == 1 and members[0].size < 100_000_000\n    binary = p / 'bin/cargo-zigbuild'\n    binary.write_bytes(archive.extractfile(members[0]).read())\n\
+        \    binary.chmod(0o700)\nPY\ncurl --fail --silent --show-error --location --retry 0 --max-time 180 \\\n  'https://files.pythonhosted.org/packages/3e/ed/7b79023aa27ceb5d461ecf761181e7c33c57bbc1a6256a39535d1c7083d2/ziglang-0.16.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl'\
+        \ --output \"$directory/ziglang-0.16.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl\"\nprintf '%s  %s\\n' '9fcda73f62b851dd72a54b710ad40a209896db14cfb13649e62191243556342b'\
+        \ \"$directory/ziglang-0.16.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl\" | sha256sum --check --status\npython3 -m pip\
+        \ install --no-deps --no-index --no-cache-dir --disable-pip-version-check --no-compile \\\n  --target \"$directory/zig-package\" \"$directory/ziglang-0.16.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl\"\
+        \nprintf '#!/bin/sh\\nexec python3 -m ziglang \"$@\"\\n' > \"$directory/bin/zig\"\nchmod 700 \"$directory/bin/zig\"\nexport PATH=\"$directory/bin:$PATH\"\n\
+        test \"$(zig version)\" = 0.16.0\ncargo-zigbuild --version\nrustup --version\nrustup toolchain install 1.93.0 --profile minimal --no-self-update\nrustup target\
+        \ add --toolchain 1.93.0 x86_64-apple-darwin aarch64-apple-darwin\nrustc +1.93.0 --version\nfor target in x86_64-apple-darwin aarch64-apple-darwin; do\n \
+        \ set +e\n  timeout --signal=TERM --kill-after=10s 600 cargo +1.93.0 zigbuild --locked --release --target \"$target\"\n  rc=$?\n  set -e\n  printf '%s' \"\
+        $rc\" > \"$directory/exit-$target\"\ndone\n"
+    - name: Record both target outcomes and Mach-O identity
+      if: ${{ always() }}
+      shell: bash
+      env:
+        A752_BUILD_OUTCOME: ${{ steps.build.outcome }}
+      run: "set -euo pipefail\npython3 - <<'PY'\nimport hashlib, json, os, pathlib, struct\ndirectory = pathlib.Path(os.environ['RUNNER_TEMP']) / ('a752-b-' + os.environ['GITHUB_RUN_ID'])\n\
+        valid = 0\nfor target, expected_cpu, arch in [('x86_64-apple-darwin', 0x01000007, 'x86_64'),\n                                   ('aarch64-apple-darwin',\
+        \ 0x0100000c, 'arm64')]:\n    marker = directory / ('exit-' + target)\n    binary = directory / 'target' / target / 'release/clerk'\n    row = {'target':\
+        \ target, 'setup_step_outcome': os.environ['A752_BUILD_OUTCOME'],\n           'runtime_test': 'NOT_IN_SCOPE', 'sdk_acquired': False}\n    if not marker.is_file():\n\
+        \        row['result'] = 'BUILD_NOT_EXERCISED_SETUP_OR_JOB_STOPPED'\n    else:\n        row['cargo_exit'] = int(marker.read_text())\n        if row['cargo_exit']\
+        \ != 0:\n            row['result'] = 'BUILD_FAILED_OR_DEADLINE'\n        elif not binary.is_file():\n            row['result'] = 'OUTPUT_MISSING'\n      \
+        \  else:\n            raw = binary.read_bytes()\n            header = struct.unpack('<IIIIIIII', raw[:32]) if len(raw) >= 32 else None\n            row.update({'bytes':\
+        \ len(raw), 'sha256': hashlib.sha256(raw).hexdigest()})\n            if header and header[0] == 0xfeedfacf and header[1] == expected_cpu and header[3] ==\
+        \ 2:\n                row.update({'result': 'BUILT_VALID_MACHO_HEADER', 'type': 'Mach-O 64-bit executable', 'arch': arch})\n                valid += 1\n \
+        \           else:\n                row['result'] = 'UNEXPECTED_BINARY_HEADER'\n    print('A752_B_TARGET ' + json.dumps(row, sort_keys=True))\nprint('A752_B_RESULT\
+        \ ' + json.dumps({'valid_targets': valid, 'scheduled_targets': 2,\n      'mac_runtime': 'NOT_TESTED', 'release_write': False, 'sdk_route': 'NO_APPLE_SDK'},\
+        \ sort_keys=True))\nraise SystemExit(0 if valid == 2 else 1)\nPY\n"
+    - name: Remove owned temporary tools and outputs
+      if: ${{ always() }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'PY'\nimport os, pathlib, shutil\nroot = pathlib.Path(os.environ['RUNNER_TEMP']).resolve()\npath = root / ('a752-b-' +\
+        \ os.environ['GITHUB_RUN_ID'])\nif path.is_dir() and not path.is_symlink():\n    assert path.parent == root\n    assert (path / 'owned').read_text() == os.environ['GITHUB_RUN_ID']\n\
+        \    shutil.rmtree(path)\nprint('A752_B_CLEANUP only owned temporary tool/build directory removed; instance cleanup is Guide-owned')\nPY\n"
