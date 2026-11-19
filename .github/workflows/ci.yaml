@@ -10,6 +10,40 @@ permissions:
   contents: read
 
 jobs:
+  darwin_build:
+    name: Darwin build (${{ matrix.target }})
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    # trunk-ignore(actionlint/runner-label): RunsOn provisions the Darwin cross-build machines.
+    runs-on: runs-on=${{ github.run_id }}/cpu=4/ram=8/family=c8a.xlarge/image=ubuntu24-full-x64/spot=false/retry=false/ssh=false
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Build Darwin binary without an Apple SDK
+        run: .github/scripts/build-darwin.sh '${{ matrix.target }}'
+
+      - name: Package
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          cd "target/$TARGET/release"
+          tar czf "../../../clerk-$TARGET.tar.gz" clerk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: clerk-${{ matrix.target }}
+          path: clerk-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
   test:
     runs-on: ubuntu-latest
     steps:
