@@ -222,13 +222,50 @@ pub async fn members(
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
+fn copy_org_id(text: &str) -> anyhow::Result<()> {
+    copy_with_pbcopy_command(std::process::Command::new("pbcopy"), text)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn copy_org_id(text: &str) -> anyhow::Result<()> {
+    let mut clipboard = arboard::Clipboard::new()?;
+    clipboard.set_text(text)?;
+    Ok(())
+}
+
+#[cfg(any(target_os = "macos", all(test, unix)))]
+fn copy_with_pbcopy_command(mut command: std::process::Command, text: &str) -> anyhow::Result<()> {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    const UNAVAILABLE: &str =
+        "The selected clipboard is not supported with the current system configuration.";
+    const WRITE_FAILED: &str = "Unknown error while interacting with the clipboard: NSPasteboard#writeObjects: returned false";
+
+    let mut child = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| anyhow::anyhow!(UNAVAILABLE))?;
+    let write_result = match child.stdin.take() {
+        Some(mut stdin) => stdin.write_all(text.as_bytes()),
+        None => Err(std::io::Error::other("clipboard stdin unavailable")),
+    };
+    let wait_result = child.wait();
+    write_result.map_err(|_| anyhow::anyhow!(WRITE_FAILED))?;
+    let status = wait_result.map_err(|_| anyhow::anyhow!(WRITE_FAILED))?;
+    anyhow::ensure!(status.success(), WRITE_FAILED);
+    Ok(())
+}
+
 pub async fn show(slug_or_id: &str, id_only: bool, copy: bool) -> anyhow::Result<()> {
     let client = ClerkClient::new()?;
     let org = resolve_organization(&client, slug_or_id).await?;
 
     if copy {
-        let mut clipboard = arboard::Clipboard::new()?;
-        clipboard.set_text(&org.id)?;
+        copy_org_id(&org.id)?;
         if id_only {
             println!("{}", org.id);
         } else {
@@ -536,4 +573,43 @@ pub async fn complete_sso_connections(org_slug: Option<&str>) -> anyhow::Result<
     }
 
     Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod clipboard_tests {
+    use super::copy_with_pbcopy_command;
+    use std::process::Command;
+
+    #[test]
+    fn pbcopy_receives_org_id_on_stdin_without_newline() {
+        let mut command = Command::new("sh");
+        command.args([
+            "-c",
+            "IFS= read -r value; result=$?; test \"$result\" -eq 1 && test \"$value\" = org_123",
+        ]);
+        copy_with_pbcopy_command(command, "org_123").unwrap();
+    }
+
+    #[test]
+    fn pbcopy_nonzero_exit_keeps_existing_write_error() {
+        let mut command = Command::new("sh");
+        command.args(["-c", "cat >/dev/null; exit 7"]);
+        assert_eq!(
+            copy_with_pbcopy_command(command, "org_123")
+                .unwrap_err()
+                .to_string(),
+            "Unknown error while interacting with the clipboard: NSPasteboard#writeObjects: returned false"
+        );
+    }
+
+    #[test]
+    fn pbcopy_missing_program_keeps_existing_initialization_error() {
+        let command = Command::new("/nonexistent-flt810-pbcopy-test");
+        assert_eq!(
+            copy_with_pbcopy_command(command, "org_123")
+                .unwrap_err()
+                .to_string(),
+            "The selected clipboard is not supported with the current system configuration."
+        );
+    }
 }
