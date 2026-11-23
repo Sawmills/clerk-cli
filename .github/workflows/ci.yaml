@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # trunk-ignore(actionlint/runner-label): Existing Namespace profile
+    runs-on: namespace-profile-sawmills-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -150,7 +151,8 @@ jobs:
   conventional_commits:
     name: Conventional Commits
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    # trunk-ignore(actionlint/runner-label): Existing Namespace profile
+    runs-on: namespace-profile-sawmills-runner
     steps:
       - name: Validate PR title
         uses: amannn/action-semantic-pull-request@v6

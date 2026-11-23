@@ -12,7 +12,8 @@ permissions:
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    # trunk-ignore(actionlint/runner-label): Existing Namespace profile
+    runs-on: namespace-profile-sawmills-runner
     steps:
       - id: create_token
         name: Create token
