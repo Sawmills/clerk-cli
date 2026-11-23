@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-sawmills-runner
     steps:
       - id: create_token
         name: Create token
