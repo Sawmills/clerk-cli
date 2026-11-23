@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to release (e.g. v1.0.0)"
+        description: "Git ref with SDK-free Darwin support to release (e.g. v1.0.0)"
         required: true
         type: string
 
@@ -25,21 +25,32 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             artifact: clerk
-          - os: macos-latest
+          - os: ubuntu-latest
             target: x86_64-apple-darwin
             artifact: clerk
-          - os: macos-latest
+          - os: ubuntu-latest
             target: aarch64-apple-darwin
             artifact: clerk
 
-    runs-on: ${{ matrix.os }}
+    # trunk-ignore(actionlint/runner-label): RunsOn provisions the Darwin cross-build machines.
+    runs-on: ${{ endsWith(matrix.target, '-apple-darwin') && format('runs-on={0}/cpu=4/ram=8/family=c8a.xlarge/image=ubuntu24-full-x64/spot=false/retry=false/ssh=false', github.run_id) || matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
 
+      - name: Check SDK-free Darwin source
+        if: endsWith(matrix.target, '-apple-darwin')
+        shell: bash
+        run: |
+          if [[ ! -x .github/scripts/build-darwin.sh ]]; then
+            echo "::error::The selected ref predates SDK-free Darwin support. Backport the SDK-free changes before rebuilding this ref."
+            exit 1
+          fi
+
       - name: Setup Rust
+        if: ${{ !endsWith(matrix.target, '-apple-darwin') }}
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -51,8 +62,15 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          if [[ "$TARGET" == *-apple-darwin ]]; then
+            .github/scripts/build-darwin.sh "$TARGET"
+          else
+            cargo build --release --target "$TARGET"
+          fi
         env:
+          TARGET: ${{ matrix.target }}
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
 
       - name: Package
